@@ -21,7 +21,6 @@ import {
   ChevronRight,
   CreditCard,
   Eye,
-  Filter,
   Lock,
   Network,
   Search,
@@ -3227,9 +3226,6 @@ function AlertsScreen({
         right={
           <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
             <span className="text-[11px] font-mono text-muted-foreground">{data.alerts.length} alerts</span>
-            <button className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors border border-border rounded-md px-2.5 py-1.5">
-              <Filter className="w-3 h-3" /> Filter
-            </button>
           </div>
         }
       />

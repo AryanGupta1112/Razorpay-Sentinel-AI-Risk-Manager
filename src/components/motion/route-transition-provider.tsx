@@ -34,6 +34,8 @@ const ENTRY_AGENTS: AgentCharacter[] = [
   "policy-guard",
   "queue-ops",
 ];
+const CONSOLE_ENTRY_MINIMUM_MS = 1_800;
+const CONSOLE_ENTRY_EXIT_MS = 760;
 
 function LoadingPortrait({ character }: { character: AgentCharacter }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -62,6 +64,8 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
   const [label, setLabel] = useState("Opening console");
   const [variant, setVariant] = useState<NavigateOptions["variant"]>("default");
   const pendingHrefRef = useRef<string | null>(null);
+  const transitionStartedAtRef = useRef(0);
+  const transitionVariantRef = useRef<NavigateOptions["variant"]>("default");
   const exitTimerRef = useRef<number | null>(null);
   const enterTimerRef = useRef<number | null>(null);
   const settleTimerRef = useRef<number | null>(null);
@@ -98,18 +102,28 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setSettling(true);
-    settleTimerRef.current = window.setTimeout(() => {
-      setActive(false);
-      setSettling(false);
-      pendingHrefRef.current = null;
-    }, 620);
+    const isConsoleEntry = transitionVariantRef.current === "console-entry";
+    const elapsed = performance.now() - transitionStartedAtRef.current;
+    const minimumDelay = isConsoleEntry
+      ? Math.max(0, CONSOLE_ENTRY_MINIMUM_MS - elapsed)
+      : 0;
+
+    enterTimerRef.current = window.setTimeout(() => {
+      setSettling(true);
+      settleTimerRef.current = window.setTimeout(() => {
+        setActive(false);
+        setSettling(false);
+        pendingHrefRef.current = null;
+      }, isConsoleEntry ? CONSOLE_ENTRY_EXIT_MS : 620);
+    }, minimumDelay);
   }, [pathname]);
 
   const navigate = useCallback(
     ({ href, label: nextLabel, variant: nextVariant = "default" }: NavigateOptions) => {
       const current = normalizePath(window.location.pathname);
       const target = normalizePath(href);
+      transitionStartedAtRef.current = performance.now();
+      transitionVariantRef.current = nextVariant;
       setVariant(nextVariant);
 
       if (current === target) {
