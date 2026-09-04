@@ -40,7 +40,13 @@ async function getRedisClient() {
   }
 
   if (!global.__sentinelRedisConnectPromise) {
-    const client = createClient({ url: REDIS_URL });
+    const client = createClient({
+      url: REDIS_URL,
+      socket: {
+        connectTimeout: 1_500,
+        reconnectStrategy: false,
+      },
+    });
     client.on("error", () => {
       // fall back to in-memory cache when Redis is unavailable
     });

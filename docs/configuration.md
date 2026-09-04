@@ -31,7 +31,7 @@ Put each key in that component's `*_API_KEY` variable. There is no shared provid
 | `SENTINEL_DATABASE_URL` | PostgreSQL URL for operational state | Uses `.runtime/ops-store.json` |
 | `SENTINEL_DATABASE_POOL_MAX` | Maximum connections per Next.js process | `1` on Vercel, otherwise `10` |
 | `SENTINEL_DATABASE_IDLE_MS` | Time before an unused connection closes | `5000` on Vercel, otherwise `30000` |
-| `SENTINEL_DATABASE_CONNECT_MS` | Maximum time allowed to establish a connection | `20000` on Vercel, otherwise `5000` |
+| `SENTINEL_DATABASE_CONNECT_MS` | Maximum time allowed to establish a connection | `2500` maximum on Vercel, otherwise `5000` |
 | `SENTINEL_REDIS_URL` | Redis URL for snapshots and assistant context | Uses in-process cache |
 
 ## Local Docker database

@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { getDatabasePoolOptions } from "./database-options.ts";
 
-test("uses a small patient pool in Vercel functions", () => {
+test("uses a small fail-fast pool in Vercel functions", () => {
   assert.deepEqual(getDatabasePoolOptions({ VERCEL: "1" }), {
     max: 1,
     idleTimeoutMillis: 5_000,
-    connectionTimeoutMillis: 20_000,
+    connectionTimeoutMillis: 2_500,
     allowExitOnIdle: true,
     keepAlive: true,
   });
@@ -33,7 +33,7 @@ test("accepts positive deployment overrides and rejects invalid values", () => {
     {
       max: 2,
       idleTimeoutMillis: 8_000,
-      connectionTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 2_500,
       allowExitOnIdle: true,
       keepAlive: true,
     },

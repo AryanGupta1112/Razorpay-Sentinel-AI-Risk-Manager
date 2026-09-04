@@ -7,9 +7,11 @@ import { buildDefenseLabSnapshot, DEFAULT_CONFIG } from "@/lib/simulation-engine
 import { getDashboardSnapshot } from "@/lib/risk-engine";
 import { hasDatabaseUrl, queryDb, withDatabaseTransaction } from "@/lib/server/database";
 import { buildGraphSnapshot } from "@/lib/server/graph-intelligence";
+import { readOperationalData } from "@/lib/server/operational-read";
 import {
   allowsFileStoreFallback,
   getRuntimeStoreDirectory,
+  isVercelRuntime,
 } from "@/lib/server/runtime-storage";
 import type {
   AgentApprovalRequestRecord,
@@ -33,6 +35,7 @@ const STORE_PATH = path.join(STORE_DIR, "ops-store.json");
 const TABLE_PREFIX = "sentinel_ops";
 
 let schemaPromise: Promise<void> | null = null;
+let lastKnownPostgresStore: OpsStore | null = null;
 
 function alertDisplayId(transactionId: string) {
   return `ALT-${transactionId.replace(/^pay_/i, "").toUpperCase()}`;
@@ -1167,10 +1170,21 @@ async function readPostgresStore(): Promise<OpsStore> {
   };
 }
 
-export async function readOpsStore(): Promise<OpsStore> {
+export async function readOpsStore(options?: {
+  allowDegradedFallback?: boolean;
+}): Promise<OpsStore> {
   if (hasDatabaseUrl()) {
     try {
-      return await readPostgresStore();
+      return await readOperationalData({
+        readPrimary: async () => {
+          const store = await readPostgresStore();
+          lastKnownPostgresStore = structuredClone(store);
+          return store;
+        },
+        readFallback: () => structuredClone(lastKnownPostgresStore ?? createInitialStore()),
+        allowDegradedFallback:
+          options?.allowDegradedFallback === true && isVercelRuntime(),
+      });
     } catch (error) {
       if (!allowsFileStoreFallback()) {
         throw new Error(

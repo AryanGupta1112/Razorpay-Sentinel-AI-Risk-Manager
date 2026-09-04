@@ -172,14 +172,16 @@ function refreshAgentRuntime(
 
 async function ensureOperationalStore(
   requestedInput?: Partial<DefenseLabConfig> & { replayCohort?: ReplayCohort },
-  options?: { enrichAgentReasoning?: boolean },
+  options?: { enrichAgentReasoning?: boolean; allowDegradedFallback?: boolean },
 ): Promise<{
   snapshot: ReturnType<typeof getDashboardSnapshot>;
   defense: ReturnType<typeof buildDefenseLabSnapshot>;
   store: Awaited<ReturnType<typeof readOpsStore>>;
 }> {
   const snapshot = getDashboardSnapshot();
-  const store = await readOpsStore();
+  const store = await readOpsStore({
+    allowDegradedFallback: options?.allowDegradedFallback,
+  });
   const latestRun = latest(store.simulatorRuns);
   const activeConfig = { ...(latestRun?.config ?? DEFAULT_CONFIG), ...(requestedInput ?? {}) };
   const replayCohort = requestedInput?.replayCohort ?? latestRun?.replayCohort ?? "linked_attacks";
@@ -229,7 +231,10 @@ export async function getConsoleBootstrap(
     }
   }
 
-  const { snapshot, defense, store } = await ensureOperationalStore(requestedConfig, options);
+  const { snapshot, defense, store } = await ensureOperationalStore(requestedConfig, {
+    ...options,
+    allowDegradedFallback: true,
+  });
   const latestPolicyArtifact =
     latest(store.policyArtifacts) ??
     buildPolicyArtifact(defense.config, null, requestedConfig?.replayCohort ?? "linked_attacks", store.merchantOverrides);

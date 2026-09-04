@@ -10,6 +10,10 @@ function positiveInteger(value: string | undefined, fallback: number) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function cappedPositiveInteger(value: string | undefined, fallback: number, maximum: number) {
+  return Math.min(positiveInteger(value, fallback), maximum);
+}
+
 export function getDatabasePoolOptions(
   environment: DatabaseEnvironment | NodeJS.ProcessEnv = process.env,
 ) {
@@ -21,10 +25,9 @@ export function getDatabasePoolOptions(
       environment.SENTINEL_DATABASE_IDLE_MS,
       isServerless ? 5_000 : 30_000,
     ),
-    connectionTimeoutMillis: positiveInteger(
-      environment.SENTINEL_DATABASE_CONNECT_MS,
-      isServerless ? 20_000 : 5_000,
-    ),
+    connectionTimeoutMillis: isServerless
+      ? cappedPositiveInteger(environment.SENTINEL_DATABASE_CONNECT_MS, 2_500, 2_500)
+      : positiveInteger(environment.SENTINEL_DATABASE_CONNECT_MS, 5_000),
     allowExitOnIdle: isServerless,
     keepAlive: true,
   };
