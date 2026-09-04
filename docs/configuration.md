@@ -1,0 +1,88 @@
+# Configuration
+
+Copy `.env.example` to `.env.local`. Keep real keys only in `.env.local`; all `.env*` files are ignored except the committed example.
+
+## Sentinel assistant
+
+| Variable | Purpose |
+| --- | --- |
+| `SENTINEL_LLM_PROVIDER` | `groq`, `gemini`, `openrouter`, or `local` |
+| `SENTINEL_LLM_MODEL` | Provider model identifier |
+| `SENTINEL_API_KEY` | API key used only by Sentinel chat |
+
+## Specialist agents
+
+Each agent has an independent `PROVIDER`, `MODEL`, and `API_KEY` triplet:
+
+- `AGENT_SIGNAL_SCOUT_*`
+- `AGENT_MERCHANT_GUARD_*`
+- `AGENT_POLICY_GUARD_*`
+- `AGENT_QUEUE_COORDINATOR_*`
+
+Put each key in that component's `*_API_KEY` variable. There is no shared provider-key fallback. This keeps quotas and credentials isolated and makes Queue Ops suitable for a second OpenRouter key.
+
+`OPENROUTER_SITE_URL` and `OPENROUTER_APP_NAME` identify this application in OpenRouter request headers; they are not credentials.
+
+## Service connections
+
+| Variable | Purpose | Empty behavior |
+| --- | --- | --- |
+| `DJANGO_AUTH_API_BASE_URL` | Django API base, normally `http://127.0.0.1:8000/api` | Uses local JSON auth |
+| `SENTINEL_DATABASE_URL` | PostgreSQL URL for operational state | Uses `.runtime/ops-store.json` |
+| `SENTINEL_REDIS_URL` | Redis URL for snapshots and assistant context | Uses in-process cache |
+
+## Authentication and email
+
+| Variable | Purpose |
+| --- | --- |
+| `DJANGO_SECRET_KEY` | Django signing secret; replace outside development |
+| `DJANGO_AUTH_TOKEN_TTL_HOURS` | Session lifetime |
+| `DJANGO_AUTH_CODE_TTL_MINUTES` | Verification and reset code lifetime |
+| `AUTH_REQUIRE_VERIFICATION_FOR_NON_ADMINS` | Requires verified email for non-admin login |
+| `AUTH_EXPOSE_CODES` | Includes development codes in API responses; keep false outside local development |
+| `DJANGO_EMAIL_HOST_USER` | SMTP username |
+| `DJANGO_EMAIL_HOST_PASSWORD` | SMTP password or application password |
+| `DJANGO_EMAIL_FROM` | Sender address |
+
+The Docker stack also accepts `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, and `DJANGO_EMAIL_USE_TLS`.
+
+For a local Django process, `DATABASE_URL` selects PostgreSQL, `DJANGO_SQLITE_PATH` overrides the SQLite file, and `SENTINEL_RUNTIME_DIR` overrides the default `.runtime/` location.
+
+## Default model assignments
+
+| Component | Default provider | Default model | Credential variable |
+| --- | --- | --- | --- |
+| Sentinel | Groq | `openai/gpt-oss-20b` | `SENTINEL_API_KEY` |
+| Signal Scout | Gemini | `gemini-3.5-flash-lite` | `AGENT_SIGNAL_SCOUT_API_KEY` |
+| Merchant Guard | Groq | `openai/gpt-oss-20b` | `AGENT_MERCHANT_GUARD_API_KEY` |
+| Policy Guard | OpenRouter | `openrouter/auto` | `AGENT_POLICY_GUARD_API_KEY` |
+| Queue Ops | OpenRouter | `openrouter/auto` | `AGENT_QUEUE_COORDINATOR_API_KEY` |
+
+The provider is considered live only when that component has a non-empty key and its provider is not `local`. Changing one component does not alter another component's provider or quota.
+
+## Provider behavior
+
+Groq and OpenRouter use OpenAI-compatible chat completions. Gemini uses its native content-generation endpoint. All provider requests have a 15-second timeout. Errors are converted into local fallback results rather than exposing provider response bodies to the browser.
+
+Set a component provider to `local` when deterministic operation is desired even if a key is present.
+
+## Halt behavior
+
+The LLM client checks the server-visible operations cookie before each ordinary completion. Specialist reasoning and direct agent chat therefore stop during Halt. Sentinel explicitly opts into read-only completion during Halt because it is used to explain the frozen system.
+
+## Precedence and isolation
+
+Next.js reads `.env.local` and `.env` according to framework conventions. The Django settings module loads repository `.env.local` and `backend/.env` only for variables not already supplied by the process. Compose-provided values therefore take precedence inside containers.
+
+Never duplicate one real key across the example file, documentation, and runtime files. `.env.example` describes names and safe defaults only.
+
+## Production checklist
+
+- Replace `DJANGO_SECRET_KEY`.
+- Set `AUTH_COOKIE_SECURE=true` behind HTTPS.
+- Keep `AUTH_EXPOSE_CODES=false`.
+- Use managed PostgreSQL and Redis URLs with appropriate transport security.
+- Configure SMTP and verify sender reputation.
+- Restrict `DJANGO_ALLOWED_HOSTS`.
+- Rotate every provider key that has appeared in logs, screenshots, or shared messages.
+- Do not expose server keys through `NEXT_PUBLIC_*` variables.
