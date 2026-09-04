@@ -320,8 +320,9 @@ function extractNumericAmount(amount: string) {
 
 function buildConsensusApprovals(
   defense: ReturnType<typeof buildDefenseLabSnapshot>,
+  limit = 8,
 ): AgentApprovalRequestRecord[] {
-  return defense.events.slice(0, 8).map((event, index) => {
+  return defense.events.slice(0, limit).map((event, index) => {
     const frame = defense.frames.find((entry) => entry.tick === event.tick);
     const agentActions = frame?.agentActions ?? [];
     const action =
@@ -352,6 +353,15 @@ function buildConsensusApprovals(
       resolutionNote: null,
     } satisfies AgentApprovalRequestRecord;
   });
+}
+
+function findConsensusApprovalFromDefense(
+  defense: ReturnType<typeof buildDefenseLabSnapshot>,
+  approvalId: string,
+) {
+  return buildConsensusApprovals(defense, defense.events.length).find(
+    (approval) => approval.id === approvalId,
+  );
 }
 
 function buildAgentRuntimeRecords(
@@ -1264,4 +1274,5 @@ export {
   buildSeedGraphSnapshot,
   buildSimulatorRun,
   caseTitle,
+  findConsensusApprovalFromDefense,
 };

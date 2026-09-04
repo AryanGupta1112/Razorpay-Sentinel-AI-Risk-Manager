@@ -13,6 +13,7 @@ import {
   buildSeedGraphSnapshot,
   buildSimulatorRun,
   caseTitle,
+  findConsensusApprovalFromDefense,
   readOpsStore,
   withOpsStore,
 } from "@/lib/server/ops-store";
@@ -757,13 +758,13 @@ export async function resolveAgentApproval(input: {
       replayCohort,
       merchantOverrides: store.merchantOverrides,
     });
-    const generatedApprovals = buildAgentRuntimeRecordsFromDefense(
+    const generatedApproval = findConsensusApprovalFromDefense(
       defense,
-      replayCohort,
-    ).approvals;
+      input.approvalId,
+    );
     const approval = findApprovalForResolution(
       store.agentApprovalRequests,
-      generatedApprovals,
+      generatedApproval ? [generatedApproval] : [],
       input.approvalId,
     );
 
