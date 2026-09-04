@@ -3,6 +3,7 @@ import "server-only";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from "node:crypto";
+import { getRuntimeStoreDirectory } from "@/lib/server/runtime-storage";
 import type {
   AdminUserSummary,
   AuthStore,
@@ -15,7 +16,7 @@ import type {
   SentinelRole,
 } from "@/types/auth";
 
-const STORE_DIR = path.join(process.cwd(), ".runtime");
+const STORE_DIR = getRuntimeStoreDirectory();
 const STORE_PATH = path.join(STORE_DIR, "auth-store.json");
 
 const NON_ADMIN_VERIFICATION_REQUIRED =

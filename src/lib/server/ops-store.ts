@@ -7,6 +7,10 @@ import { buildDefenseLabSnapshot, DEFAULT_CONFIG } from "@/lib/simulation-engine
 import { getDashboardSnapshot } from "@/lib/risk-engine";
 import { hasDatabaseUrl, queryDb, withDatabaseTransaction } from "@/lib/server/database";
 import { buildGraphSnapshot } from "@/lib/server/graph-intelligence";
+import {
+  allowsFileStoreFallback,
+  getRuntimeStoreDirectory,
+} from "@/lib/server/runtime-storage";
 import type {
   AgentApprovalRequestRecord,
   AgentMemoryRecord,
@@ -24,7 +28,7 @@ import type {
 } from "@/types/ops";
 import type { DefenseLabConfig, ReplayCohort, RiskTransaction } from "@/types/risk";
 
-const STORE_DIR = path.join(process.cwd(), ".runtime");
+const STORE_DIR = getRuntimeStoreDirectory();
 const STORE_PATH = path.join(STORE_DIR, "ops-store.json");
 const TABLE_PREFIX = "sentinel_ops";
 
@@ -1167,9 +1171,21 @@ export async function readOpsStore(): Promise<OpsStore> {
   if (hasDatabaseUrl()) {
     try {
       return await readPostgresStore();
-    } catch {
+    } catch (error) {
+      if (!allowsFileStoreFallback()) {
+        throw new Error(
+          "Sentinel could not connect to its operational PostgreSQL database. Verify SENTINEL_DATABASE_URL in Vercel and use Render's full external database URL.",
+          { cause: error },
+        );
+      }
       return readLegacyStoreFile();
     }
+  }
+
+  if (!allowsFileStoreFallback()) {
+    throw new Error(
+      "SENTINEL_DATABASE_URL is required on Vercel because serverless files are not persistent.",
+    );
   }
 
   return readLegacyStoreFile();
@@ -1183,9 +1199,21 @@ export async function writeOpsStore(store: OpsStore): Promise<void> {
         await writePostgresStore(client, store);
       });
       return;
-    } catch {
-      // fall back locally if the database is unavailable
+    } catch (error) {
+      if (!allowsFileStoreFallback()) {
+        throw new Error(
+          "Sentinel could not write to its operational PostgreSQL database. Verify SENTINEL_DATABASE_URL in Vercel and use Render's full external database URL.",
+          { cause: error },
+        );
+      }
+      // Local development can continue against its JSON store when PostgreSQL is unavailable.
     }
+  }
+
+  if (!allowsFileStoreFallback()) {
+    throw new Error(
+      "SENTINEL_DATABASE_URL is required on Vercel because serverless files are not persistent.",
+    );
   }
 
   await ensureStoreFile();
