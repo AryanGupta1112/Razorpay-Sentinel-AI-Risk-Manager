@@ -60,6 +60,7 @@ If an existing Docker volume was created with older credentials, either set `POS
 | `DJANGO_EMAIL_HOST_USER` | SMTP username |
 | `DJANGO_EMAIL_HOST_PASSWORD` | SMTP password or application password |
 | `DJANGO_EMAIL_FROM` | Sender address |
+| `DJANGO_EMAIL_TIMEOUT_SECONDS` | SMTP connection timeout; defaults to `10` seconds |
 | `RESEND_API_KEY` | Resend API key for HTTPS email delivery on hosts that block SMTP |
 | `RESEND_FROM_EMAIL` | Sender identity on a domain verified by Resend |
 
