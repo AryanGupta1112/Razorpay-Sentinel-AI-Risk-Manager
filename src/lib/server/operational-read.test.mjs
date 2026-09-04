@@ -27,3 +27,16 @@ test("keeps strict operational reads strict", async () => {
     /database unavailable/,
   );
 });
+
+test("does not let a stalled primary read block resilient pages", async () => {
+  const startedAt = performance.now();
+  const result = await readOperationalData({
+    readPrimary: () => new Promise(() => undefined),
+    readFallback: () => ({ source: "generated" }),
+    allowDegradedFallback: true,
+    fallbackAfterMs: 10,
+  });
+
+  assert.deepEqual(result, { source: "generated" });
+  assert.ok(performance.now() - startedAt < 100);
+});

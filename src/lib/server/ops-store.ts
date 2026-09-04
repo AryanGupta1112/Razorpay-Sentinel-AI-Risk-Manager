@@ -694,7 +694,12 @@ async function ensurePostgresSchema() {
     });
   }
 
-  await schemaPromise;
+  try {
+    await schemaPromise;
+  } catch (error) {
+    schemaPromise = null;
+    throw error;
+  }
 }
 
 async function writePostgresStore(client: PoolClient, store: OpsStore) {
@@ -1184,6 +1189,7 @@ export async function readOpsStore(options?: {
         readFallback: () => structuredClone(lastKnownPostgresStore ?? createInitialStore()),
         allowDegradedFallback:
           options?.allowDegradedFallback === true && isVercelRuntime(),
+        fallbackAfterMs: 2_000,
       });
     } catch (error) {
       if (!allowsFileStoreFallback()) {
