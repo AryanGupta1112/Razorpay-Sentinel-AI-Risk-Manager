@@ -5,9 +5,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: sentinel
-      POSTGRES_USER: sentinel
-      POSTGRES_PASSWORD: sentinel
+      POSTGRES_DB: "${POSTGRES_DB:-sentinel}"
+      POSTGRES_USER: "${POSTGRES_USER:-sentinel}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your local .env file before starting Docker Compose.}"
     volumes:
       - sentinel_postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -35,7 +35,7 @@ services:
     environment:
       DJANGO_DEBUG: "true"
       DJANGO_ALLOWED_HOSTS: "127.0.0.1,localhost,sentinel-backend"
-      DATABASE_URL: "postgresql://sentinel:sentinel@sentinel-postgres:5432/sentinel"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your local .env file before starting Docker Compose.}@sentinel-postgres:5432/${POSTGRES_DB:-sentinel}"
       REDIS_URL: "redis://sentinel-redis:6379/1"
       DJANGO_EMAIL_HOST: "smtp.gmail.com"
       DJANGO_EMAIL_PORT: "587"

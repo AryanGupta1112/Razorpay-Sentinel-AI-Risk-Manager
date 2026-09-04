@@ -212,9 +212,14 @@ The committed example already points Next.js to:
 
 ```env
 DJANGO_AUTH_API_BASE_URL=http://127.0.0.1:8000/api
-SENTINEL_DATABASE_URL=postgresql://sentinel:sentinel@127.0.0.1:5432/sentinel
+POSTGRES_DB=sentinel
+POSTGRES_USER=sentinel
+POSTGRES_PASSWORD=change_me_before_running_docker
+SENTINEL_DATABASE_URL=postgresql://sentinel:change_me_before_running_docker@127.0.0.1:5432/sentinel
 SENTINEL_REDIS_URL=redis://127.0.0.1:6379/1
 ```
+
+For Docker mode, copy `.env.example` to `.env` and replace `change_me_before_running_docker` before starting Compose. Docker Compose reads `.env` automatically; Git ignores it.
 
 Add model keys only if live generated explanations are required.
 
@@ -234,6 +239,8 @@ Compose starts:
 | `sentinel-redis` | `127.0.0.1:6379` | Runtime cache |
 
 The Django entrypoint runs migrations and seeds development accounts before starting its server.
+
+The committed database values are placeholders, not usable production credentials. Put a real local `POSTGRES_PASSWORD` and matching `SENTINEL_DATABASE_URL` in `.env` or `.env.local` for any shared environment. If an older local Docker volume was created with a different password, set the old value temporarily or recreate the volume with `docker compose down -v`.
 
 ### 3. Start Next.js
 
@@ -313,6 +320,9 @@ These values identify the application in request headers; they are not credentia
 | `DJANGO_AUTH_API_BASE_URL` | Django API base URL | Uses local JSON authentication |
 | `SENTINEL_DATABASE_URL` | PostgreSQL connection for operational state | Uses `.runtime/ops-store.json` |
 | `SENTINEL_REDIS_URL` | Redis connection for snapshots and assistant context | Uses process memory |
+| `POSTGRES_DB` | Local Compose database name | Defaults to `sentinel` |
+| `POSTGRES_USER` | Local Compose database user | Defaults to `sentinel` |
+| `POSTGRES_PASSWORD` | Local Compose database password | Required for Docker Compose |
 
 ### Authentication and email
 

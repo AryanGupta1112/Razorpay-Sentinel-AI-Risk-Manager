@@ -31,6 +31,20 @@ Put each key in that component's `*_API_KEY` variable. There is no shared provid
 | `SENTINEL_DATABASE_URL` | PostgreSQL URL for operational state | Uses `.runtime/ops-store.json` |
 | `SENTINEL_REDIS_URL` | Redis URL for snapshots and assistant context | Uses in-process cache |
 
+## Local Docker database
+
+The Compose stack reads PostgreSQL settings from environment variables. Docker Compose loads a root `.env` file automatically; that file is ignored by Git.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `POSTGRES_DB` | `sentinel` | Local database name |
+| `POSTGRES_USER` | `sentinel` | Local database user |
+| `POSTGRES_PASSWORD` | Required | Local database password |
+
+Copy `.env.example` to `.env` before using Docker Compose and replace `change_me_before_running_docker`. If Next.js also connects directly to PostgreSQL, keep `.env.local` or the shell `SENTINEL_DATABASE_URL` value in sync.
+
+If an existing Docker volume was created with older credentials, either set `POSTGRES_PASSWORD` to that old local value or recreate the local volume with `docker compose down -v`.
+
 ## Authentication and email
 
 | Variable | Purpose |
