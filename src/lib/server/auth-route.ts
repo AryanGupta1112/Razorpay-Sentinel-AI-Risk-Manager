@@ -13,6 +13,19 @@ export function authErrorResponse(error: unknown) {
     );
   }
 
+  if (
+    error instanceof Error &&
+    "status" in error &&
+    typeof error.status === "number" &&
+    "code" in error &&
+    typeof error.code === "string"
+  ) {
+    return NextResponse.json(
+      { error: error.message, code: error.code },
+      { status: error.status },
+    );
+  }
+
   return NextResponse.json(
     {
       error: "Unexpected server error.",

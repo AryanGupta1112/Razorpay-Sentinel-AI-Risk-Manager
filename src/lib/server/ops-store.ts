@@ -37,6 +37,16 @@ const TABLE_PREFIX = "sentinel_ops";
 let schemaPromise: Promise<void> | null = null;
 let lastKnownPostgresStore: OpsStore | null = null;
 
+export class OperationalStoreError extends Error {
+  readonly status = 503;
+  readonly code = "OPERATIONAL_STORE_UNAVAILABLE";
+
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "OperationalStoreError";
+  }
+}
+
 function alertDisplayId(transactionId: string) {
   return `ALT-${transactionId.replace(/^pay_/i, "").toUpperCase()}`;
 }
@@ -1193,7 +1203,7 @@ export async function readOpsStore(options?: {
       });
     } catch (error) {
       if (!allowsFileStoreFallback()) {
-        throw new Error(
+        throw new OperationalStoreError(
           "Sentinel could not connect to its operational PostgreSQL database. Verify SENTINEL_DATABASE_URL in Vercel and use Render's full external database URL.",
           { cause: error },
         );
@@ -1203,7 +1213,7 @@ export async function readOpsStore(options?: {
   }
 
   if (!allowsFileStoreFallback()) {
-    throw new Error(
+    throw new OperationalStoreError(
       "SENTINEL_DATABASE_URL is required on Vercel because serverless files are not persistent.",
     );
   }
@@ -1221,7 +1231,7 @@ export async function writeOpsStore(store: OpsStore): Promise<void> {
       return;
     } catch (error) {
       if (!allowsFileStoreFallback()) {
-        throw new Error(
+        throw new OperationalStoreError(
           "Sentinel could not write to its operational PostgreSQL database. Verify SENTINEL_DATABASE_URL in Vercel and use Render's full external database URL.",
           { cause: error },
         );
@@ -1231,7 +1241,7 @@ export async function writeOpsStore(store: OpsStore): Promise<void> {
   }
 
   if (!allowsFileStoreFallback()) {
-    throw new Error(
+    throw new OperationalStoreError(
       "SENTINEL_DATABASE_URL is required on Vercel because serverless files are not persistent.",
     );
   }

@@ -5,6 +5,7 @@ import { buildDefenseLabSnapshot, DEFAULT_CONFIG } from "@/lib/simulation-engine
 import { buildConsoleData, type ConsoleData } from "@/lib/console-adapters";
 import { getDashboardSnapshot } from "@/lib/risk-engine";
 import { buildGraphSnapshot } from "@/lib/server/graph-intelligence";
+import { findApprovalForResolution } from "@/lib/server/approval-resolution";
 import {
   alertDisplayId,
   buildAgentRuntimeRecordsFromDefense,
@@ -749,10 +750,25 @@ export async function resolveAgentApproval(input: {
   const actor = input.actor?.trim() || DEFAULT_ACTOR;
 
   return withOpsStore(async (store) => {
-    const approval = store.agentApprovalRequests.find((entry) => entry.id === input.approvalId);
+    const latestRun = latest(store.simulatorRuns);
+    const replayCohort = latestRun?.replayCohort ?? "linked_attacks";
+    const defense = buildDefenseLabSnapshot({
+      ...(latestRun?.config ?? DEFAULT_CONFIG),
+      replayCohort,
+      merchantOverrides: store.merchantOverrides,
+    });
+    const generatedApprovals = buildAgentRuntimeRecordsFromDefense(
+      defense,
+      replayCohort,
+    ).approvals;
+    const approval = findApprovalForResolution(
+      store.agentApprovalRequests,
+      generatedApprovals,
+      input.approvalId,
+    );
 
-    if (!approval) {
-      throw new Error(`Approval ${input.approvalId} was not found.`);
+    if (approval.status !== "pending") {
+      return approval;
     }
 
     approval.status = input.status;
