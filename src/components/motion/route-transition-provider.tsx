@@ -36,6 +36,7 @@ const ENTRY_AGENTS: AgentCharacter[] = [
 ];
 const CONSOLE_ENTRY_MINIMUM_MS = 1_800;
 const CONSOLE_ENTRY_EXIT_MS = 760;
+const CONSOLE_ENTRY_MAXIMUM_MS = 12_000;
 
 function LoadingPortrait({ character }: { character: AgentCharacter }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -69,6 +70,7 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
   const exitTimerRef = useRef<number | null>(null);
   const enterTimerRef = useRef<number | null>(null);
   const settleTimerRef = useRef<number | null>(null);
+  const transitionSafetyTimerRef = useRef<number | null>(null);
 
   const clearTimers = useCallback(() => {
     if (exitTimerRef.current) {
@@ -82,6 +84,10 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
     if (settleTimerRef.current) {
       window.clearTimeout(settleTimerRef.current);
       settleTimerRef.current = null;
+    }
+    if (transitionSafetyTimerRef.current) {
+      window.clearTimeout(transitionSafetyTimerRef.current);
+      transitionSafetyTimerRef.current = null;
     }
   }, []);
 
@@ -111,6 +117,10 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
     enterTimerRef.current = window.setTimeout(() => {
       setSettling(true);
       settleTimerRef.current = window.setTimeout(() => {
+        if (transitionSafetyTimerRef.current) {
+          window.clearTimeout(transitionSafetyTimerRef.current);
+          transitionSafetyTimerRef.current = null;
+        }
         setActive(false);
         setSettling(false);
         pendingHrefRef.current = null;
@@ -132,9 +142,18 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
         setLabel(nextLabel ?? "At overview");
         setActive(true);
         setSettling(false);
+        transitionSafetyTimerRef.current = window.setTimeout(() => {
+          setActive(false);
+          setSettling(false);
+          pendingHrefRef.current = null;
+        }, CONSOLE_ENTRY_MAXIMUM_MS);
         enterTimerRef.current = window.setTimeout(() => {
           setSettling(true);
           settleTimerRef.current = window.setTimeout(() => {
+            if (transitionSafetyTimerRef.current) {
+              window.clearTimeout(transitionSafetyTimerRef.current);
+              transitionSafetyTimerRef.current = null;
+            }
             setActive(false);
             setSettling(false);
             enterTimerRef.current = null;
@@ -148,6 +167,11 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
       setSettling(false);
       setActive(true);
       pendingHrefRef.current = href;
+      transitionSafetyTimerRef.current = window.setTimeout(() => {
+        setActive(false);
+        setSettling(false);
+        pendingHrefRef.current = null;
+      }, CONSOLE_ENTRY_MAXIMUM_MS);
 
       exitTimerRef.current = window.setTimeout(() => {
         router.push(href);

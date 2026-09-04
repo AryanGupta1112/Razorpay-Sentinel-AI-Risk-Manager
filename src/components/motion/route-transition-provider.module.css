@@ -107,13 +107,14 @@
 
 .entryLoader {
   position: absolute;
+  z-index: 3;
   left: 50%;
   top: 50%;
   width: min(22rem, calc(100vw - 3rem));
   transform: translate(-50%, -50%);
   color: #fff;
   text-align: center;
-  opacity: 0;
+  opacity: 1;
 }
 
 .active .entryLoader {
