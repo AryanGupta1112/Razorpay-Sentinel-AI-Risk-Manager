@@ -1,0 +1,4 @@
+django==6.1
+djangorestframework==3.18.0
+django-redis==6.0.0
+psycopg[binary]==3.2.12
