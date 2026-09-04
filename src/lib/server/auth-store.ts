@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from "node:crypto";
 import { getRuntimeStoreDirectory } from "@/lib/server/runtime-storage";
+import { getCapabilities, hasCapability } from "@/lib/authorization";
 import type {
   AdminUserSummary,
   AuthStore,
@@ -11,8 +12,6 @@ import type {
   EmailVerificationRequestRecord,
   PasswordResetRequestRecord,
   SafeAuthUser,
-  SentinelCapability,
-  SentinelCapabilities,
   SentinelRole,
 } from "@/types/auth";
 
@@ -20,6 +19,7 @@ const STORE_DIR = getRuntimeStoreDirectory();
 const STORE_PATH = path.join(STORE_DIR, "auth-store.json");
 
 const NON_ADMIN_VERIFICATION_REQUIRED =
+  process.env.NODE_ENV === "production" ||
   process.env.AUTH_REQUIRE_VERIFICATION_FOR_NON_ADMINS !== "false";
 
 function nowIso() {
@@ -175,85 +175,13 @@ export function toSafeUser(user: AuthUserRecord): SafeAuthUser {
   };
 }
 
-export function getCapabilities(role: SentinelRole): SentinelCapabilities {
-  return {
-    canReviewAlerts: true,
-    canManageMerchantOverrides:
-      role === "platform_admin" || role === "risk_lead" || role === "merchant_risk_analyst",
-    canAccessSimulator: true,
-    canEditSimulator: role === "platform_admin" || role === "risk_lead",
-    canPromotePolicy: role === "platform_admin" || role === "risk_lead",
-    canAdminUsers: role === "platform_admin",
-  };
-}
-
-export function hasCapability(role: SentinelRole, capability: SentinelCapability) {
-  const map: Record<SentinelRole, Set<SentinelCapability>> = {
-    platform_admin: new Set([
-      "view_overview",
-      "view_alerts",
-      "review_alerts",
-      "view_transactions",
-      "view_merchants",
-      "manage_merchant_overrides",
-      "view_copilot",
-      "use_copilot",
-      "view_simulator",
-      "edit_simulator",
-      "save_simulator_run",
-      "promote_policy",
-      "view_model_performance",
-      "admin_users",
-      "manage_system",
-    ]),
-    risk_lead: new Set([
-      "view_overview",
-      "view_alerts",
-      "review_alerts",
-      "view_transactions",
-      "view_merchants",
-      "manage_merchant_overrides",
-      "view_copilot",
-      "use_copilot",
-      "view_simulator",
-      "edit_simulator",
-      "save_simulator_run",
-      "promote_policy",
-      "view_model_performance",
-    ]),
-    fraud_ops_analyst: new Set([
-      "view_overview",
-      "view_alerts",
-      "review_alerts",
-      "view_transactions",
-      "view_merchants",
-      "view_copilot",
-      "use_copilot",
-      "view_simulator",
-      "view_model_performance",
-    ]),
-    merchant_risk_analyst: new Set([
-      "view_overview",
-      "view_alerts",
-      "review_alerts",
-      "view_transactions",
-      "view_merchants",
-      "manage_merchant_overrides",
-      "view_copilot",
-      "use_copilot",
-      "view_simulator",
-      "view_model_performance",
-    ]),
-  };
-
-  return map[role].has(capability);
-}
-
 export function requiresEmailVerification(user: AuthUserRecord) {
   if (!NON_ADMIN_VERIFICATION_REQUIRED) return false;
-  if (user.isSuperuser || user.role === "platform_admin") return false;
+  if (user.isSuperuser) return false;
   return !user.emailVerified;
 }
+
+export { getCapabilities, hasCapability };
 
 function createNumericCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -315,7 +243,6 @@ export function createProvisionedUser(
     email: string;
     password: string;
     role: SentinelRole;
-    emailVerified?: boolean;
     merchantScopeIds?: string[];
     isSuperuser?: boolean;
   },
@@ -345,7 +272,7 @@ export function createProvisionedUser(
     email,
     password: input.password,
     role: input.role,
-    emailVerified: input.emailVerified ?? false,
+    emailVerified: input.isSuperuser === true,
     isSuperuser: input.isSuperuser ?? false,
     merchantScopeIds: sanitizeScopeIds(input.merchantScopeIds),
   });
@@ -364,7 +291,6 @@ export function updateProvisionedUser(
     username: string;
     email: string;
     role: SentinelRole;
-    emailVerified?: boolean;
     merchantScopeIds?: string[];
     password?: string;
   },
@@ -398,8 +324,8 @@ export function updateProvisionedUser(
   const nextRole = input.role;
   const nextScopeIds =
     nextRole === "merchant_risk_analyst" ? sanitizeScopeIds(input.merchantScopeIds) : [];
-  const nextIsSuperuser = nextRole === "platform_admin";
-  const nextEmailVerified = nextIsSuperuser ? true : (input.emailVerified ?? user.emailVerified);
+  const nextIsSuperuser = user.isSuperuser && nextRole === "platform_admin";
+  const nextEmailVerified = nextIsSuperuser ? true : user.emailVerified;
   const nextPassword = input.password?.trim() ?? "";
 
   if (nextPassword && nextPassword.length < 8) {
@@ -410,6 +336,7 @@ export function updateProvisionedUser(
   const accessChanged =
     user.role !== nextRole ||
     user.isSuperuser !== nextIsSuperuser ||
+    user.emailVerified !== nextEmailVerified ||
     JSON.stringify(user.merchantScopeIds) !== JSON.stringify(nextScopeIds);
 
   user.username = username;

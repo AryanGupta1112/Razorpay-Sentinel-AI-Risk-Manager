@@ -94,6 +94,7 @@ type ConsoleMerchant = {
 
 type ConsoleTransaction = {
   id: string;
+  merchantId: string;
   merchant: string;
   amount: string;
   status: ConsoleTxStatus;
@@ -554,6 +555,7 @@ function buildMerchants(
 function buildTransactions(snapshot: DashboardSnapshot, autoHoldThreshold: number): ConsoleTransaction[] {
   return snapshot.transactions.map((transaction) => ({
     id: transaction.id,
+    merchantId: transaction.merchantId.toUpperCase(),
     merchant: transaction.merchantName,
     amount: money(transaction.amount),
     status: toTxStatus(transaction, autoHoldThreshold),

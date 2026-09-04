@@ -8,14 +8,18 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { PORTRAIT_H, PORTRAIT_W, paintPortrait } from "@/lib/sentinel-pixel-art/agent-art";
+import type { AgentCharacter } from "@/lib/sentinel-pixel-art/agent-art";
 import styles from "./route-transition-provider.module.css";
 
 type NavigateOptions = {
   href: string;
   label?: string;
+  variant?: "default" | "console-entry";
 };
 
 type RouteTransitionContextValue = {
@@ -23,6 +27,24 @@ type RouteTransitionContextValue = {
 };
 
 const RouteTransitionContext = createContext<RouteTransitionContextValue | null>(null);
+
+const ENTRY_AGENTS: AgentCharacter[] = [
+  "signal-scout",
+  "merchant-guard",
+  "policy-guard",
+  "queue-ops",
+];
+
+function LoadingPortrait({ character }: { character: AgentCharacter }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const context = canvasRef.current?.getContext("2d");
+    if (context) paintPortrait(context, character, 1);
+  }, [character]);
+
+  return <canvas ref={canvasRef} width={PORTRAIT_W} height={PORTRAIT_H} aria-hidden="true" />;
+}
 
 function normalizePath(href: string) {
   try {
@@ -38,6 +60,7 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState(false);
   const [settling, setSettling] = useState(false);
   const [label, setLabel] = useState("Opening console");
+  const [variant, setVariant] = useState<NavigateOptions["variant"]>("default");
   const pendingHrefRef = useRef<string | null>(null);
   const exitTimerRef = useRef<number | null>(null);
   const enterTimerRef = useRef<number | null>(null);
@@ -84,9 +107,10 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   const navigate = useCallback(
-    ({ href, label: nextLabel }: NavigateOptions) => {
+    ({ href, label: nextLabel, variant: nextVariant = "default" }: NavigateOptions) => {
       const current = normalizePath(window.location.pathname);
       const target = normalizePath(href);
+      setVariant(nextVariant);
 
       if (current === target) {
         clearTimers();
@@ -124,16 +148,37 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
     <RouteTransitionContext.Provider value={value}>
       {children}
       <div
-        className={[styles.root, active ? styles.active : "", settling ? styles.settling : ""].join(" ")}
-        aria-hidden="true"
+        className={[
+          styles.root,
+          active ? styles.active : "",
+          settling ? styles.settling : "",
+          variant === "console-entry" ? styles.consoleEntry : "",
+        ].join(" ")}
+        aria-hidden={!active}
       >
         <div className={styles.veil} />
         <div className={styles.panelTop} />
         <div className={styles.panelBottom} />
-        <div className={styles.centerMark}>
-          <span className={styles.dot} />
-          <span>{label}</span>
-        </div>
+        {variant === "console-entry" ? (
+          <div className={styles.entryLoader} role="status" aria-live="polite">
+            <div className={styles.entryAgents}>
+              {ENTRY_AGENTS.map((character, index) => (
+                <span key={character} style={{ "--agent-index": index } as CSSProperties}>
+                  <LoadingPortrait character={character} />
+                </span>
+              ))}
+            </div>
+            <div className={styles.entryTrack} aria-hidden="true">
+              <span />
+            </div>
+            <div className={styles.entryLabel}>{label}</div>
+          </div>
+        ) : (
+          <div className={styles.centerMark}>
+            <span className={styles.dot} />
+            <span>{label}</span>
+          </div>
+        )}
       </div>
     </RouteTransitionContext.Provider>
   );

@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, CheckCircle2, KeyRound, MailCheck, ShieldCheck } from "lucide-react";
 import { PORTRAIT_H, PORTRAIT_W, paintPortrait } from "@/lib/sentinel-pixel-art/agent-art";
 import type { AgentCharacter } from "@/lib/sentinel-pixel-art/agent-art";
+import { useRouteTransition } from "@/components/motion/route-transition-provider";
 import styles from "./auth-screen.module.css";
 
 type AuthMode = "login" | "verify" | "forgot" | "reset";
@@ -114,6 +115,7 @@ function StatusPanel({
 
 export default function AuthScreen({ mode }: { mode: AuthMode }) {
   const router = useRouter();
+  const { navigate } = useRouteTransition();
   const searchParams = useSearchParams();
   const [entered, setEntered] = useState(false);
   const initialStatus = useMemo(() => {
@@ -196,8 +198,7 @@ export default function AuthScreen({ mode }: { mode: AuthMode }) {
       throw new Error(payload.error ?? "Login failed.");
     }
 
-    router.push("/overview");
-    router.refresh();
+    navigate({ href: "/overview", label: "Preparing your risk floor", variant: "console-entry" });
   }
 
   async function handleVerificationSend() {

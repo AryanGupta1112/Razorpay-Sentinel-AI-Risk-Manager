@@ -52,7 +52,7 @@ If an existing Docker volume was created with older credentials, either set `POS
 | `DJANGO_SECRET_KEY` | Django signing secret; replace outside development |
 | `DJANGO_AUTH_TOKEN_TTL_HOURS` | Session lifetime |
 | `DJANGO_AUTH_CODE_TTL_MINUTES` | Verification and reset code lifetime |
-| `AUTH_REQUIRE_VERIFICATION_FOR_NON_ADMINS` | Requires verified email for non-admin login |
+| `AUTH_REQUIRE_VERIFICATION_FOR_NON_ADMINS` | Local-development verification switch; production always requires verification for every non-superuser account |
 | `AUTH_EXPOSE_CODES` | Includes development codes in API responses; keep false outside local development |
 | `DJANGO_EMAIL_HOST_USER` | SMTP username |
 | `DJANGO_EMAIL_HOST_PASSWORD` | SMTP password or application password |

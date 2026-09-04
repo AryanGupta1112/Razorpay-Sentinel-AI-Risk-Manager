@@ -96,6 +96,103 @@
   box-shadow: 0 0 14px rgba(240, 206, 76, 0.6);
 }
 
+.consoleEntry .veil,
+.consoleEntry .panelTop,
+.consoleEntry .panelBottom {
+  background: #000;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.entryLoader {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(22rem, calc(100vw - 3rem));
+  transform: translate(-50%, -50%);
+  color: #fff;
+  text-align: center;
+  opacity: 0;
+}
+
+.active .entryLoader {
+  animation: entry-loader-in 480ms cubic-bezier(0.16, 1, 0.3, 1) 100ms both;
+}
+
+.settling .entryLoader {
+  animation: entry-loader-out 260ms ease both;
+}
+
+.entryAgents {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(0.8rem, 4vw, 1.5rem);
+  height: 5.75rem;
+  margin-bottom: 1.15rem;
+}
+
+.entryAgents span {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 3.25rem;
+  height: 5.5rem;
+  animation: agent-ready 1.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  animation-delay: calc(var(--agent-index) * 110ms);
+}
+
+.entryAgents canvas {
+  width: 3.25rem;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.entryTrack {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.entryTrack span {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  transform-origin: left center;
+  animation: entry-progress 1.25s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.entryLabel {
+  margin-top: 0.9rem;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+@keyframes entry-loader-in {
+  from { opacity: 0; filter: blur(8px); transform: translate(-50%, -46%); }
+  to { opacity: 1; filter: blur(0); transform: translate(-50%, -50%); }
+}
+
+@keyframes entry-loader-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes agent-ready {
+  0%, 58%, 100% { transform: translateY(0); }
+  70% { transform: translateY(-5px); }
+}
+
+@keyframes entry-progress {
+  0% { transform: translateX(-100%) scaleX(0.35); }
+  48% { transform: translateX(0) scaleX(0.72); }
+  100% { transform: translateX(100%) scaleX(0.45); }
+}
+
 @keyframes panel-top-in {
   from {
     transform: translateY(-102%);
@@ -173,5 +270,25 @@
   .active,
   .settling {
     opacity: 0;
+  }
+
+  .consoleEntry.active,
+  .consoleEntry.settling {
+    opacity: 1;
+  }
+
+  .entryLoader,
+  .entryAgents span,
+  .entryTrack span {
+    animation: none !important;
+  }
+
+  .active .entryLoader {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  .entryTrack span {
+    transform: scaleX(0.72);
   }
 }

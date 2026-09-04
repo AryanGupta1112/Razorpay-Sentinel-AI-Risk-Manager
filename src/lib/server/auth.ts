@@ -31,6 +31,7 @@ import type {
   SentinelRole,
   VerificationSendResult,
 } from "@/types/auth";
+import { canAccessMerchant } from "@/lib/authorization";
 
 export const AUTH_COOKIE_NAME = "sentinel_session";
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -241,6 +242,16 @@ async function getSession(request?: NextRequest): Promise<AuthSession | null> {
 
   const user = store.users.find((entry) => entry.id === session.userId);
   if (!user) return null;
+  if (requiresEmailVerification(user)) {
+    await withAuthStore(async (currentStore) => {
+      const currentSession = currentStore.sessions.find((entry) => entry.id === session.id);
+      if (currentSession && currentSession.revokedAt === null) {
+        currentSession.revokedAt = new Date().toISOString();
+        currentSession.updatedAt = currentSession.revokedAt;
+      }
+    });
+    return null;
+  }
 
   return {
     sessionId: session.id,
@@ -276,8 +287,7 @@ export function ensureCapability(
   if (
     session.user.role === "merchant_risk_analyst" &&
     options?.merchantId &&
-    session.user.merchantScopeIds.length > 0 &&
-    !session.user.merchantScopeIds.includes(options.merchantId)
+    !canAccessMerchant(session.user, options.merchantId)
   ) {
     throw new AuthError("That merchant is outside your review scope.", 403, "OUT_OF_SCOPE", {
       merchantId: options.merchantId,
@@ -529,7 +539,6 @@ export async function provisionUser(input: {
   email: string;
   password: string;
   role: SentinelRole;
-  emailVerified: boolean;
   merchantScopeIds?: string[];
 }) {
   if (shouldUseDjangoAuthBackend()) {
@@ -560,7 +569,6 @@ export async function updateUser(input: {
   username: string;
   email: string;
   role: SentinelRole;
-  emailVerified: boolean;
   merchantScopeIds?: string[];
   password?: string;
 }) {

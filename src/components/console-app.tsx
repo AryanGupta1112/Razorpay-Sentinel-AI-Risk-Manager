@@ -37,6 +37,7 @@ import {
 import { ResponsiveContainer, Area, AreaChart, Tooltip } from "recharts";
 import { ConsoleData, ConsoleScreen, type ConsoleSimEdge, type ConsoleSimNode } from "@/lib/console-adapters";
 import type { AuthSessionUser } from "@/types/auth";
+import { canAccessMerchant, canViewScreen } from "@/lib/authorization";
 import AdminUsersScreen from "@/components/admin-users-screen";
 import SentinelControlRoomScreen from "@/components/sentinel-control-room-screen";
 import { TablePagination } from "@/components/table-pagination";
@@ -64,9 +65,7 @@ function roleLabel(role: AuthSessionUser["role"]) {
 }
 
 function viewerCanAccessMerchant(viewer: AuthSessionUser, merchantId?: string | null) {
-  if (!merchantId || viewer.role !== "merchant_risk_analyst") return true;
-  if (viewer.merchantScopeIds.length === 0) return true;
-  return viewer.merchantScopeIds.includes(merchantId);
+  return canAccessMerchant(viewer, merchantId);
 }
 
 const NAV: Array<{ id: Screen; icon: LucideIcon; label: string }> = [
@@ -81,7 +80,7 @@ const NAV: Array<{ id: Screen; icon: LucideIcon; label: string }> = [
 ];
 
 function navItemsForViewer(viewer: AuthSessionUser) {
-  return NAV.filter((item) => item.id !== "admin" || viewer.capabilities.canAdminUsers);
+  return NAV.filter((item) => canViewScreen(viewer.role, item.id));
 }
 
 const SEVERITY_STYLE = {
@@ -1227,12 +1226,16 @@ function CopilotScreen({
               <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/25 flex items-center justify-center flex-shrink-0">
                 <Bot className="w-3.5 h-3.5 text-primary" />
               </div>
-              <div className="bg-card border border-border rounded-xl px-4 py-3 flex items-center gap-1.5">
+              <div
+                className="min-w-[58px] bg-card border border-border rounded-xl px-4 py-3 flex items-center justify-center gap-1.5"
+                role="status"
+                aria-label="Sentinel is typing"
+              >
                 {[0, 1, 2].map((index) => (
                   <span
                     key={index}
-                    className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-pulse"
-                    style={{ animationDelay: `${index * 0.18}s` }}
+                    className="sentinel-typing-dot h-1.5 w-1.5 rounded-full bg-white"
+                    style={{ animationDelay: `${index * 120}ms` }}
                   />
                 ))}
               </div>
@@ -2296,8 +2299,9 @@ function SimulatorScreen({
                 </div>
                 <button
                   type="button"
+                  disabled={!viewer.capabilities.canManageSystem}
                   onClick={() => onOperationsModeChange(isHalted ? "running" : "halted")}
-                  className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors ${
+                  className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-2 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
                     !isHalted
                       ? "border-red-500/25 bg-red-500/10 text-red-200"
                       : "border-white/10 bg-white/5 text-white/70 hover:text-white"
@@ -2496,8 +2500,9 @@ function SimulatorScreen({
                             <div className="text-[11px] font-mono uppercase tracking-[0.22em] text-white/45">Playback speed</div>
                             <button
                               type="button"
+                              disabled={!viewer.capabilities.canManageSystem}
                               onClick={() => onOperationsModeChange(isHalted ? "running" : "halted")}
-                              className={`rounded-full border px-3 py-1 text-[11px] font-mono transition-colors ${
+                              className={`rounded-full border px-3 py-1 text-[11px] font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
                                 !isHalted
                                   ? "border-red-500/25 bg-red-500/10 text-red-300"
                                   : "border-white/10 bg-white/[0.03] text-white/60 hover:text-white"
@@ -3866,7 +3871,10 @@ export default function ConsoleApp({
   const router = useRouter();
   const reduceMotion = useReducedMotion();
   const operationsControl = useOperationsControl(initialOperationsMode);
-  const { mode: operationsMode, isHalted, setMode: setOperationsMode } = operationsControl;
+  const { mode: operationsMode, isHalted } = operationsControl;
+  const setOperationsMode = viewer.capabilities.canManageSystem
+    ? operationsControl.setMode
+    : () => undefined;
   const [liveData, setLiveData] = useState(data);
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const [lastNonImmersiveScreen, setLastNonImmersiveScreen] = useState<Screen>(
@@ -3882,6 +3890,11 @@ export default function ConsoleApp({
   useEffect(() => {
     const syncFromLocation = () => {
       const next = screenFromPathname(window.location.pathname);
+      if (!canViewScreen(viewer.role, next)) {
+        window.history.replaceState({ screen: "overview" }, "", "/overview");
+        startTransition(() => setScreen("overview"));
+        return;
+      }
       startTransition(() => {
         setScreen(next);
       });
@@ -3890,7 +3903,7 @@ export default function ConsoleApp({
     syncFromLocation();
     window.addEventListener("popstate", syncFromLocation);
     return () => window.removeEventListener("popstate", syncFromLocation);
-  }, []);
+  }, [viewer.role]);
 
   useEffect(() => {
     if (screen !== "simulator" && screen !== "control-room") {
@@ -3939,6 +3952,7 @@ export default function ConsoleApp({
   }, [isHalted, screen]);
 
   const navigate = useCallback((next: Screen) => {
+    if (!canViewScreen(viewer.role, next)) return;
     const path = pathForScreen(next);
 
     startTransition(() => {
@@ -3948,7 +3962,7 @@ export default function ConsoleApp({
     if (typeof window !== "undefined" && window.location.pathname !== path) {
       window.history.pushState({ screen: next }, "", path);
     }
-  }, []);
+  }, [viewer.role]);
 
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -3969,6 +3983,7 @@ export default function ConsoleApp({
       onBack={() => navigate(lastNonImmersiveScreen)}
       onDataReplace={setLiveData}
       canResolveApprovals={viewer.capabilities.canEditSimulator}
+      canManageOperations={viewer.capabilities.canManageSystem}
       operationsMode={operationsMode}
       onOperationsModeChange={setOperationsMode}
     />

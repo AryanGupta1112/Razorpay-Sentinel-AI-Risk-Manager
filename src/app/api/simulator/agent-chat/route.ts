@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAgentLlmConfig } from "@/lib/agent-llm";
 import { completeText } from "@/lib/llm";
-import { getRouteSessionOrThrow } from "@/lib/server/auth";
+import { ensureCapability, getRouteSessionOrThrow } from "@/lib/server/auth";
 import { authErrorResponse } from "@/lib/server/auth-route";
 import { getConsoleBootstrap } from "@/lib/server/ops-service";
 import { blockIfOperationsHalted } from "@/lib/server/operations-control";
@@ -43,7 +43,8 @@ function finishAgentReply(value: string, maxWords = 100) {
 
 export async function POST(request: NextRequest) {
   try {
-    await getRouteSessionOrThrow(request);
+    const session = await getRouteSessionOrThrow(request);
+    ensureCapability(session, "view_control_room");
     const halted = await blockIfOperationsHalted();
     if (halted) return halted;
 

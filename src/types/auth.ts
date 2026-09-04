@@ -13,6 +13,7 @@ export type SentinelCapability =
   | "manage_merchant_overrides"
   | "view_copilot"
   | "use_copilot"
+  | "view_control_room"
   | "view_simulator"
   | "edit_simulator"
   | "save_simulator_run"
@@ -87,10 +88,13 @@ export type SafeAuthUser = {
 export type SentinelCapabilities = {
   canReviewAlerts: boolean;
   canManageMerchantOverrides: boolean;
+  canUseCopilot: boolean;
+  canAccessControlRoom: boolean;
   canAccessSimulator: boolean;
   canEditSimulator: boolean;
   canPromotePolicy: boolean;
   canAdminUsers: boolean;
+  canManageSystem: boolean;
 };
 
 export type AuthSessionUser = SafeAuthUser & {

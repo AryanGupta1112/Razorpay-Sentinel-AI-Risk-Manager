@@ -169,4 +169,4 @@ Sentinel uses the latest cross-screen context and remains callable while halted.
 
 ## Endpoint authorization summary
 
-Read endpoints generally require any valid authenticated session. Case actions and comments require alert-review permission and merchant scope. Business overrides require override-management permission and merchant scope. Simulator runs, interventions, graph rebuilds, and approval resolution require the relevant simulator or policy capability. User administration requires platform administrator access.
+Every protected read endpoint requires its screen-specific view capability. Case and business responses are filtered to the caller's merchant scope before serialization. Case actions and comments require alert-review permission and merchant scope. Business overrides require override-management permission and merchant scope. Simulator runs, agent chat, interventions, graph rebuilds, and approval resolution require the relevant control-room, simulator, or policy capability. User administration and site-wide Halt/Continue controls require Platform Admin access.

@@ -6,7 +6,8 @@ import { blockIfOperationsHalted } from "@/lib/server/operations-control";
 
 export async function GET() {
   try {
-    await getRouteSessionOrThrow();
+    const session = await getRouteSessionOrThrow();
+    ensureCapability(session, "view_simulator");
     const { latestGraphSnapshot } = await getConsoleBootstrap();
     return NextResponse.json({ graph: latestGraphSnapshot });
   } catch (error) {

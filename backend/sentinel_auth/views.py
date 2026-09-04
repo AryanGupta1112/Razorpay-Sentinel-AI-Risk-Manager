@@ -163,7 +163,6 @@ class UsersView(APIView):
                     email=body.get("email", ""),
                     password=body.get("password", ""),
                     role=body.get("role", ""),
-                    email_verified=body.get("emailVerified") is True,
                     merchant_scope_ids=body.get("merchantScopeIds"),
                 )
             )
@@ -183,7 +182,6 @@ class UsersView(APIView):
                     email=body.get("email", ""),
                     password=body.get("password"),
                     role=body.get("role", ""),
-                    email_verified=body.get("emailVerified") is True,
                     merchant_scope_ids=body.get("merchantScopeIds"),
                 )
             )

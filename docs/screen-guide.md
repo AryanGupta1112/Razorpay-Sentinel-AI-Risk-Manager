@@ -66,7 +66,7 @@ The Monitor retains prior messages instead of replacing the conversation with on
 
 ## Admin
 
-Admin is available only to platform administrators. It lists users and supports creating, updating, and permanently deleting accounts while managing username, email, role, verification status, password, and business scope. Changes to password or access revoke existing sessions; deletion removes every session and recovery request associated with the account. The signed-in account and final Platform Admin cannot be deleted.
+Admin is available only to platform administrators. It lists users and supports creating, updating, and permanently deleting accounts while managing username, email, role, password, and business scope. New accounts always start unverified and operators complete verification using the code sent to their email. Changes to password or access revoke existing sessions; deletion removes every session and recovery request associated with the account. The signed-in account and final Platform Admin cannot be deleted.
 
 ## Responsive behavior
 

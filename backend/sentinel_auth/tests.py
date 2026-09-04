@@ -1,10 +1,81 @@
 from datetime import timedelta
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 from .models import EmailVerificationRequest, PasswordResetRequest, SentinelRole, SessionToken
-from .services import AuthServiceError, delete_user
+from .services import AuthServiceError, authenticate_user, delete_user, provision_user, resolve_session
+
+
+@override_settings(SENTINEL_REQUIRE_VERIFICATION_FOR_NON_ADMINS=True)
+class EmailVerificationEnforcementTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+
+        self.user_model = get_user_model()
+
+    def test_provisioned_platform_admin_must_verify_before_login(self):
+        result = provision_user(
+            username="new_admin",
+            email="new-admin@example.com",
+            password="NewAdmin!2026",
+            role=SentinelRole.PLATFORM_ADMIN,
+            merchant_scope_ids=[],
+        )
+
+        self.assertFalse(result["user"]["emailVerified"])
+        with self.assertRaises(AuthServiceError) as raised:
+            authenticate_user("new_admin", "NewAdmin!2026")
+
+        self.assertEqual(raised.exception.code, "VERIFICATION_REQUIRED")
+
+    def test_recovery_superuser_can_login_without_separate_verification(self):
+        self.user_model.objects.create_superuser(
+            username="recovery_admin",
+            email="recovery@example.com",
+            password="RecoveryAdmin!2026",
+        )
+
+        result = authenticate_user("recovery_admin", "RecoveryAdmin!2026")
+
+        self.assertEqual(result["user"]["role"], SentinelRole.PLATFORM_ADMIN)
+
+    def test_session_is_revoked_when_verification_is_removed(self):
+        user = self.user_model.objects.create_user(
+            username="verified_operator",
+            email="verified@example.com",
+            password="VerifiedOperator!2026",
+            role=SentinelRole.FRAUD_OPS_ANALYST,
+            email_verified=True,
+        )
+        login = authenticate_user("verified_operator", "VerifiedOperator!2026")
+        user.email_verified = False
+        user.save(update_fields=["email_verified", "updated_at"])
+
+        with self.assertRaises(AuthServiceError) as raised:
+            resolve_session(login["token"])
+
+        self.assertEqual(raised.exception.code, "VERIFICATION_REQUIRED")
+        self.assertIsNotNone(SessionToken.objects.get(id=login["sessionId"]).revoked_at)
+
+    def test_django_authentication_rejects_a_stale_unverified_token(self):
+        user = self.user_model.objects.create_user(
+            username="stale_admin",
+            email="stale-admin@example.com",
+            password="StaleAdmin!2026",
+            role=SentinelRole.PLATFORM_ADMIN,
+            email_verified=True,
+        )
+        session, token = SessionToken.issue(user)
+        user.email_verified = False
+        user.save(update_fields=["email_verified", "updated_at"])
+
+        response = APIClient().get("/api/users", HTTP_AUTHORIZATION=f"Token {token}")
+
+        self.assertIn(response.status_code, {401, 403})
+        session.refresh_from_db()
+        self.assertIsNotNone(session.revoked_at)
 
 
 class DeleteUserServiceTests(TestCase):

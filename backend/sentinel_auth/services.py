@@ -42,10 +42,13 @@ def capabilities_for_role(role: str) -> dict[str, bool]:
         "canReviewAlerts": True,
         "canManageMerchantOverrides": role
         in {SentinelRole.PLATFORM_ADMIN, SentinelRole.RISK_LEAD, SentinelRole.MERCHANT_RISK_ANALYST},
-        "canAccessSimulator": True,
+        "canUseCopilot": role != SentinelRole.MERCHANT_RISK_ANALYST,
+        "canAccessControlRoom": role != SentinelRole.MERCHANT_RISK_ANALYST,
+        "canAccessSimulator": role != SentinelRole.MERCHANT_RISK_ANALYST,
         "canEditSimulator": role in {SentinelRole.PLATFORM_ADMIN, SentinelRole.RISK_LEAD},
         "canPromotePolicy": role in {SentinelRole.PLATFORM_ADMIN, SentinelRole.RISK_LEAD},
         "canAdminUsers": role == SentinelRole.PLATFORM_ADMIN,
+        "canManageSystem": role == SentinelRole.PLATFORM_ADMIN,
     }
 
 
@@ -74,7 +77,7 @@ def serialize_user(user) -> dict:
 def requires_email_verification(user) -> bool:
     if not settings.SENTINEL_REQUIRE_VERIFICATION_FOR_NON_ADMINS:
         return False
-    if user.is_superuser or user.role == SentinelRole.PLATFORM_ADMIN:
+    if user.is_superuser:
         return False
     return not user.email_verified
 
@@ -125,6 +128,16 @@ def resolve_session(raw_token: str | None):
     )
     if not session or session.expires_at <= timezone.now():
         raise AuthServiceError("Authentication required.", 401, "UNAUTHENTICATED")
+
+    if requires_email_verification(session.user):
+        session.revoked_at = timezone.now()
+        session.save(update_fields=["revoked_at", "updated_at"])
+        raise AuthServiceError(
+            "Email verification is required before login.",
+            403,
+            "VERIFICATION_REQUIRED",
+            {"verificationRequired": True, "username": session.user.username},
+        )
 
     return {
         "sessionId": str(session.id),
@@ -266,7 +279,6 @@ def provision_user(
     email: str,
     password: str,
     role: str,
-    email_verified: bool,
     merchant_scope_ids: list[str] | None,
 ) -> dict:
     normalized_username = username.strip().lower()
@@ -287,7 +299,7 @@ def provision_user(
         email=normalized_email,
         password=password.strip(),
         role=role,
-        email_verified=email_verified,
+        email_verified=False,
         merchant_scope_ids=normalize_scope_ids(merchant_scope_ids),
     )
     return {"ok": True, "user": serialize_user(user)}
@@ -300,7 +312,6 @@ def update_user(
     username: str,
     email: str,
     role: str,
-    email_verified: bool,
     merchant_scope_ids: list[str] | None,
     password: str | None,
 ) -> dict:
@@ -321,8 +332,8 @@ def update_user(
         raise AuthServiceError("A user with that email already exists.", 409, "EMAIL_CONFLICT")
 
     next_scope_ids = normalize_scope_ids(merchant_scope_ids) if role == SentinelRole.MERCHANT_RISK_ANALYST else []
-    next_is_superuser = role == SentinelRole.PLATFORM_ADMIN
-    next_email_verified = True if next_is_superuser else email_verified
+    next_is_superuser = bool(user.is_superuser and role == SentinelRole.PLATFORM_ADMIN)
+    next_email_verified = True if next_is_superuser else bool(user.email_verified)
     password_value = (password or "").strip()
     if password_value and len(password_value) < 8:
         raise AuthServiceError("Password must be at least 8 characters long.", 400, "WEAK_PASSWORD")
@@ -330,6 +341,7 @@ def update_user(
     access_changed = (
         str(user.role) != role
         or bool(user.is_superuser) != next_is_superuser
+        or bool(user.email_verified) != next_email_verified
         or normalize_scope_ids(user.merchant_scope_ids) != next_scope_ids
     )
 

@@ -83,7 +83,7 @@ Core capabilities include:
 | **Alerts** | Supports case review, explanations, actions, notes, status filters, and pagination. |
 | **Businesses** | Ranks merchant health, opens detailed profiles, and manages business-specific review rules. |
 | **Payments** | Shows the rolling transaction stream and complete payment, device, location, retry, and risk details. |
-| **Admin** | Lets platform administrators create, update, and delete users while managing roles, verification, passwords, and business scope. |
+| **Admin** | Lets platform administrators create, update, and delete users while managing roles, passwords, and business scope. Every newly provisioned account must verify its email. |
 
 ### The specialist team
 
@@ -331,7 +331,7 @@ These values identify the application in request headers; they are not credentia
 | `DJANGO_SECRET_KEY` | Django signing secret | Development-only value |
 | `DJANGO_AUTH_TOKEN_TTL_HOURS` | Session lifetime | `168` |
 | `DJANGO_AUTH_CODE_TTL_MINUTES` | Verification and reset-code lifetime | `30` |
-| `AUTH_REQUIRE_VERIFICATION_FOR_NON_ADMINS` | Require verified email before non-admin login | `true` |
+| `AUTH_REQUIRE_VERIFICATION_FOR_NON_ADMINS` | Local verification switch; production requires verification for every non-superuser | `true` |
 | `AUTH_EXPOSE_CODES` | Include development codes in responses | `false` in the example |
 | `DJANGO_EMAIL_HOST_USER` | SMTP username | Empty |
 | `DJANGO_EMAIL_HOST_PASSWORD` | SMTP password or application password | Empty |
@@ -341,7 +341,7 @@ When SMTP credentials are empty, local Django uses its console email backend. Se
 
 ## Halt and Continue
 
-Halt is a global operating state, not a visual pause button. It is stored in browser local storage and the `sentinel_operations_mode` cookie, so it survives reloads and applies across standard and immersive screens.
+Halt is a global operating state, not a visual pause button. Only a Platform Admin can change it. It is stored in browser local storage and the `sentinel_operations_mode` cookie, so it survives reloads and applies across standard and immersive screens.
 
 While **Halt** is active:
 

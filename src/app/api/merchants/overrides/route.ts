@@ -3,12 +3,16 @@ import { authErrorResponse } from "@/lib/server/auth-route";
 import { ensureCapability, getRouteSessionOrThrow } from "@/lib/server/auth";
 import { listMerchantOverrides, upsertMerchantOverride } from "@/lib/server/ops-service";
 import { blockIfOperationsHalted } from "@/lib/server/operations-control";
+import { canAccessMerchant } from "@/lib/authorization";
 
 export async function GET() {
   try {
-    await getRouteSessionOrThrow();
+    const session = await getRouteSessionOrThrow();
+    ensureCapability(session, "view_merchants");
     const overrides = await listMerchantOverrides();
-    return NextResponse.json({ overrides });
+    return NextResponse.json({
+      overrides: overrides.filter((override) => canAccessMerchant(session.user, override.merchantId)),
+    });
   } catch (error) {
     return authErrorResponse(error);
   }

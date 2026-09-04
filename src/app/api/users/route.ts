@@ -39,7 +39,6 @@ export async function POST(request: NextRequest) {
       email?: string;
       password?: string;
       role?: SentinelRole;
-      emailVerified?: boolean;
       merchantScopeIds?: string[];
       isSuperuser?: boolean;
     };
@@ -67,7 +66,6 @@ export async function POST(request: NextRequest) {
       email: body.email ?? "",
       password: body.password ?? "",
       role: body.role as SentinelRole,
-      emailVerified: body.emailVerified === true,
       merchantScopeIds: body.merchantScopeIds ?? [],
     });
 
@@ -88,7 +86,6 @@ export async function PATCH(request: NextRequest) {
       email?: string;
       password?: string;
       role?: SentinelRole;
-      emailVerified?: boolean;
       merchantScopeIds?: string[];
     };
 
@@ -116,7 +113,6 @@ export async function PATCH(request: NextRequest) {
       email: body.email,
       password: body.password?.trim() ? body.password : undefined,
       role: body.role as SentinelRole,
-      emailVerified: body.emailVerified === true,
       merchantScopeIds: body.merchantScopeIds ?? [],
     });
 

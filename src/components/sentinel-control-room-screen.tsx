@@ -124,6 +124,7 @@ export default function SentinelControlRoomScreen({
   onBack,
   onDataReplace,
   canResolveApprovals,
+  canManageOperations,
   operationsMode,
   onOperationsModeChange,
 }: {
@@ -131,6 +132,7 @@ export default function SentinelControlRoomScreen({
   onBack: () => void;
   onDataReplace: (data: ConsoleData) => void;
   canResolveApprovals: boolean;
+  canManageOperations: boolean;
   operationsMode: OperationsMode;
   onOperationsModeChange: (mode: OperationsMode) => void;
 }) {
@@ -577,16 +579,18 @@ export default function SentinelControlRoomScreen({
                   <button
                     type="button"
                     aria-pressed={!isHalted}
+                    disabled={!canManageOperations}
                     onClick={() => onOperationsModeChange("running")}
-                    className={`border px-1.5 py-1 text-[9px] uppercase transition-colors ${!isHalted ? "border-[#a84d44] bg-[#e6806e] text-[#251416]" : "border-[#b8a37f] bg-[#fff3d2] text-[#4e4034] hover:bg-[#f8e6b9]"}`}
+                    className={`border px-1.5 py-1 text-[9px] uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${!isHalted ? "border-[#a84d44] bg-[#e6806e] text-[#251416]" : "border-[#b8a37f] bg-[#fff3d2] text-[#4e4034] hover:bg-[#f8e6b9]"}`}
                   >
                     continue
                   </button>
                   <button
                     type="button"
                     aria-pressed={isHalted}
+                    disabled={!canManageOperations}
                     onClick={() => onOperationsModeChange("halted")}
-                    className={`border px-1.5 py-1 text-[9px] uppercase transition-colors ${isHalted ? "border-[#a84d44] bg-[#e6806e] text-[#251416]" : "border-[#b8a37f] bg-[#fff3d2] text-[#4e4034] hover:bg-[#f8e6b9]"}`}
+                    className={`border px-1.5 py-1 text-[9px] uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${isHalted ? "border-[#a84d44] bg-[#e6806e] text-[#251416]" : "border-[#b8a37f] bg-[#fff3d2] text-[#4e4034] hover:bg-[#f8e6b9]"}`}
                   >
                     halt
                   </button>

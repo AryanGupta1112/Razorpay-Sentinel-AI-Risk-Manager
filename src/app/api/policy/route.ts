@@ -6,7 +6,8 @@ import { blockIfOperationsHalted } from "@/lib/server/operations-control";
 
 export async function GET() {
   try {
-    await getRouteSessionOrThrow();
+    const session = await getRouteSessionOrThrow();
+    ensureCapability(session, "view_model_performance");
     const { latestPolicyArtifact } = await getConsoleBootstrap();
     return NextResponse.json({ artifact: latestPolicyArtifact });
   } catch (error) {

@@ -45,7 +45,7 @@ const ROLE_META: Record<
     title: "Platform control",
     summary: "Global system access, account administration, and policy authority.",
     detail:
-      "Platform admins are elevated accounts. They stay global, retain admin controls, and do not require email verification to access Sentinel.",
+      "Platform admins have global access and account controls. Newly provisioned admins must verify their email; only the original recovery superuser bypasses verification.",
     icon: Crown,
     badgeClass: "border-amber-400/25 bg-amber-500/12 text-amber-200",
     cardClass: "border-amber-400/18 bg-[linear-gradient(180deg,rgba(245,182,66,0.14),rgba(245,182,66,0.04))]",
@@ -110,7 +110,6 @@ export default function AdminUsersScreen({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState(DEFAULT_PASSWORD);
   const [role, setRole] = useState<RoleOption>("fraud_ops_analyst");
-  const [emailVerified, setEmailVerified] = useState(false);
   const [merchantScope, setMerchantScope] = useState("M_QUICKBASKET, M_VYRA");
   const [selectedUser, setSelectedUser] = useState<AdminUserSummary | null>(null);
   const [editUsername, setEditUsername] = useState("");
@@ -209,7 +208,6 @@ export default function AdminUsersScreen({
           email,
           password,
           role,
-          emailVerified,
           merchantScopeIds:
             role === "merchant_risk_analyst"
               ? merchantScope.split(",").map((scopeId) => scopeId.trim()).filter(Boolean)
@@ -228,7 +226,6 @@ export default function AdminUsersScreen({
       setEmail("");
       setPassword(DEFAULT_PASSWORD);
       setRole("fraud_ops_analyst");
-      setEmailVerified(false);
       setMerchantScope("M_QUICKBASKET, M_VYRA");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not provision Sentinel user.");
@@ -255,7 +252,6 @@ export default function AdminUsersScreen({
           email: editEmail,
           password: editPassword.trim() ? editPassword : undefined,
           role: editRole,
-          emailVerified: editRole === "platform_admin" ? true : editEmailVerified,
           merchantScopeIds: editScopeIds,
         }),
       });
@@ -410,7 +406,11 @@ export default function AdminUsersScreen({
                         {user.emailVerified ? "Verified" : "Pending"}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {user.merchantScopeIds.length > 0 ? user.merchantScopeIds.join(", ") : "Global"}
+                        {user.merchantScopeIds.length > 0
+                          ? user.merchantScopeIds.join(", ")
+                          : user.role === "merchant_risk_analyst"
+                            ? "No businesses assigned"
+                            : "Global"}
                       </div>
                       <div className="text-xs text-muted-foreground">{new Date(user.updatedAt).toLocaleString()}</div>
                       <div className="flex items-center justify-end gap-2 text-xs text-foreground/78">
@@ -509,15 +509,9 @@ export default function AdminUsersScreen({
                 </label>
               ) : null}
 
-              <label className="flex items-center gap-3 rounded-2xl border border-border bg-white/[0.02] px-4 py-3 text-sm text-foreground">
-                <input
-                  type="checkbox"
-                  checked={emailVerified}
-                  onChange={(event) => setEmailVerified(event.target.checked)}
-                  className="h-4 w-4 accent-[color:var(--primary)]"
-                />
-                Mark email as verified on creation
-              </label>
+              <div className="rounded-2xl border border-border bg-white/[0.02] px-4 py-3 text-sm text-foreground">
+                New accounts start unverified. The operator must use Verify Email before signing in.
+              </div>
 
               <button
                 type="submit"
@@ -572,7 +566,7 @@ export default function AdminUsersScreen({
                     Manage {selectedUser.username}
                   </h2>
                   <p className="mt-3 max-w-[56ch] text-sm leading-6 text-white/62">
-                    Update identity, verification state, role assignment, and merchant scope for this operator. Password rotation is optional.
+                    Update identity, role assignment, and merchant scope for this operator. Password rotation is optional; email verification is completed by the operator.
                   </p>
                 </div>
                 <button
@@ -663,17 +657,15 @@ export default function AdminUsersScreen({
                     <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white">
                       <input
                         type="checkbox"
-                        checked={editRole === "platform_admin" ? true : editEmailVerified}
-                        onChange={(event) => setEditEmailVerified(event.target.checked)}
-                        disabled={editRole === "platform_admin"}
+                        checked={editEmailVerified}
+                        readOnly
+                        disabled
                         className="h-4 w-4 accent-[color:var(--primary)]"
                       />
                       <div>
                         <div className="font-medium text-white">Email verification complete</div>
                         <div className="mt-1 text-xs text-white/55">
-                          {editRole === "platform_admin"
-                            ? "Platform admins always stay verified for immediate access."
-                            : "Non-admin users need a verified email before they can sign in."}
+                          Verification can only be completed with the code sent to this operator&apos;s email.
                         </div>
                       </div>
                     </label>
