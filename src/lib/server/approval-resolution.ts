@@ -1,4 +1,4 @@
-export class ApprovalResolutionError extends Error {
+class ApprovalResolutionError extends Error {
   readonly status = 409;
   readonly code = "APPROVAL_NOT_AVAILABLE";
 

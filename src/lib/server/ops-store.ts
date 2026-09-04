@@ -8,11 +8,7 @@ import { getDashboardSnapshot } from "@/lib/risk-engine";
 import { hasDatabaseUrl, queryDb, withDatabaseTransaction } from "@/lib/server/database";
 import { buildGraphSnapshot } from "@/lib/server/graph-intelligence";
 import { readOperationalData } from "@/lib/server/operational-read";
-import {
-  allowsFileStoreFallback,
-  getRuntimeStoreDirectory,
-  isVercelRuntime,
-} from "@/lib/server/runtime-storage";
+import { getRuntimeStoreDirectory } from "@/lib/server/runtime-storage";
 import type {
   AgentApprovalRequestRecord,
   AgentMemoryRecord,
@@ -36,16 +32,6 @@ const TABLE_PREFIX = "sentinel_ops";
 
 let schemaPromise: Promise<void> | null = null;
 let lastKnownPostgresStore: OpsStore | null = null;
-
-export class OperationalStoreError extends Error {
-  readonly status = 503;
-  readonly code = "OPERATIONAL_STORE_UNAVAILABLE";
-
-  constructor(message: string, options?: ErrorOptions) {
-    super(message, options);
-    this.name = "OperationalStoreError";
-  }
-}
 
 function alertDisplayId(transactionId: string) {
   return `ALT-${transactionId.replace(/^pay_/i, "").toUpperCase()}`;
@@ -1207,31 +1193,18 @@ export async function readOpsStore(options?: {
           return store;
         },
         readFallback: () => structuredClone(lastKnownPostgresStore ?? createInitialStore()),
-        allowDegradedFallback:
-          options?.allowDegradedFallback === true && isVercelRuntime(),
+        allowDegradedFallback: options?.allowDegradedFallback === true,
         fallbackAfterMs: 2_000,
       });
-    } catch (error) {
-      if (!allowsFileStoreFallback()) {
-        throw new OperationalStoreError(
-          "Sentinel could not connect to its operational PostgreSQL database. Verify SENTINEL_DATABASE_URL in Vercel and use Render's full external database URL.",
-          { cause: error },
-        );
-      }
+    } catch {
       return readLegacyStoreFile();
     }
-  }
-
-  if (!allowsFileStoreFallback()) {
-    throw new OperationalStoreError(
-      "SENTINEL_DATABASE_URL is required on Vercel because serverless files are not persistent.",
-    );
   }
 
   return readLegacyStoreFile();
 }
 
-export async function writeOpsStore(store: OpsStore): Promise<void> {
+async function writeOpsStore(store: OpsStore): Promise<void> {
   if (hasDatabaseUrl()) {
     try {
       await ensurePostgresSchema();
@@ -1239,24 +1212,79 @@ export async function writeOpsStore(store: OpsStore): Promise<void> {
         await writePostgresStore(client, store);
       });
       return;
-    } catch (error) {
-      if (!allowsFileStoreFallback()) {
-        throw new OperationalStoreError(
-          "Sentinel could not write to its operational PostgreSQL database. Verify SENTINEL_DATABASE_URL in Vercel and use Render's full external database URL.",
-          { cause: error },
-        );
-      }
+    } catch {
       // Local development can continue against its JSON store when PostgreSQL is unavailable.
     }
   }
 
-  if (!allowsFileStoreFallback()) {
-    throw new OperationalStoreError(
-      "SENTINEL_DATABASE_URL is required on Vercel because serverless files are not persistent.",
-    );
+  await ensureStoreFile();
+  await writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
+}
+
+export async function saveAgentApprovalResolution(
+  approval: AgentApprovalRequestRecord,
+  auditEvent: AuditEventRecord,
+): Promise<void> {
+  if (hasDatabaseUrl()) {
+    try {
+      await ensurePostgresSchema();
+      await withDatabaseTransaction(async (client) => {
+        await client.query(
+          `INSERT INTO ${TABLE_PREFIX}_agent_approval_requests (
+            id, tick, agent_id, agent_name, target_type, target_id, target_label, action, rationale, status,
+            requested_at, resolved_at, resolved_by, resolution_note
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+          ON CONFLICT (id) DO UPDATE SET
+            status = EXCLUDED.status,
+            resolved_at = EXCLUDED.resolved_at,
+            resolved_by = EXCLUDED.resolved_by,
+            resolution_note = EXCLUDED.resolution_note`,
+          [
+            approval.id,
+            approval.tick,
+            approval.agentId,
+            approval.agentName,
+            approval.targetType,
+            approval.targetId,
+            approval.targetLabel,
+            approval.action,
+            approval.rationale,
+            approval.status,
+            approval.requestedAt,
+            approval.resolvedAt ?? null,
+            approval.resolvedBy ?? null,
+            approval.resolutionNote ?? null,
+          ],
+        );
+        await client.query(
+          `INSERT INTO ${TABLE_PREFIX}_audit_events (
+            id, case_id, type, actor, note, created_at, metadata
+          ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb)
+          ON CONFLICT (id) DO NOTHING`,
+          [
+            auditEvent.id,
+            auditEvent.caseId,
+            auditEvent.type,
+            auditEvent.actor,
+            auditEvent.note,
+            auditEvent.createdAt,
+            JSON.stringify(auditEvent.metadata ?? null),
+          ],
+        );
+      });
+      return;
+    } catch {
+      // Keep the local console usable through the JSON store while PostgreSQL restarts.
+    }
   }
 
-  await ensureStoreFile();
+  const store = await readLegacyStoreFile();
+  const existingIndex = store.agentApprovalRequests.findIndex(
+    (entry) => entry.id === approval.id,
+  );
+  if (existingIndex === -1) store.agentApprovalRequests.unshift(approval);
+  else store.agentApprovalRequests[existingIndex] = approval;
+  store.auditEvents.unshift(auditEvent);
   await writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf8");
 }
 

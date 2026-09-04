@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import json
 import secrets
 from datetime import timedelta
 from typing import Iterable
-from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
@@ -90,43 +87,6 @@ def generate_code() -> str:
 
 
 def send_sentinel_email(subject: str, body: str, recipient: str) -> None:
-    resend_api_key = getattr(settings, "RESEND_API_KEY", "")
-    if resend_api_key:
-        request = Request(
-            getattr(settings, "RESEND_API_URL", "https://api.resend.com/emails"),
-            data=json.dumps(
-                {
-                    "from": getattr(settings, "RESEND_FROM_EMAIL", settings.DEFAULT_FROM_EMAIL),
-                    "to": [recipient],
-                    "subject": subject,
-                    "text": body,
-                }
-            ).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {resend_api_key}",
-                "Content-Type": "application/json",
-                "User-Agent": "Sentinel-Risk-Manager/1.0",
-            },
-            method="POST",
-        )
-        try:
-            with urlopen(request, timeout=10) as response:
-                if response.status >= 400:
-                    raise AuthServiceError(
-                        "The email provider rejected the delivery request.",
-                        503,
-                        "EMAIL_DELIVERY_FAILED",
-                    )
-            return
-        except AuthServiceError:
-            raise
-        except (HTTPError, URLError, OSError, TimeoutError) as error:
-            raise AuthServiceError(
-                "The verification email could not be delivered. Please try again shortly.",
-                503,
-                "EMAIL_DELIVERY_FAILED",
-            ) from error
-
     if not settings.DEBUG and settings.EMAIL_BACKEND.endswith("console.EmailBackend"):
         raise AuthServiceError(
             "Email delivery is not configured for this environment.",

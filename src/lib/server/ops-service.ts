@@ -15,6 +15,7 @@ import {
   caseTitle,
   findConsensusApprovalFromDefense,
   readOpsStore,
+  saveAgentApprovalResolution,
   withOpsStore,
 } from "@/lib/server/ops-store";
 import {
@@ -749,52 +750,49 @@ export async function resolveAgentApproval(input: {
   note?: string;
 }) {
   const actor = input.actor?.trim() || DEFAULT_ACTOR;
-
-  return withOpsStore(async (store) => {
-    const latestRun = latest(store.simulatorRuns);
-    const replayCohort = latestRun?.replayCohort ?? "linked_attacks";
-    const defense = buildDefenseLabSnapshot({
-      ...(latestRun?.config ?? DEFAULT_CONFIG),
-      replayCohort,
-      merchantOverrides: store.merchantOverrides,
-    });
-    const generatedApproval = findConsensusApprovalFromDefense(
-      defense,
-      input.approvalId,
-    );
-    const approval = findApprovalForResolution(
-      store.agentApprovalRequests,
-      generatedApproval ? [generatedApproval] : [],
-      input.approvalId,
-    );
-
-    if (approval.status !== "pending") {
-      return approval;
-    }
-
-    approval.status = input.status;
-    approval.resolvedAt = new Date().toISOString();
-    approval.resolvedBy = actor;
-    approval.resolutionNote =
-      input.note?.trim() ||
-      (input.status === "approved"
-        ? "Approved in simulator operations dock."
-        : "Rejected in simulator operations dock.");
-
-    store.auditEvents.unshift({
-      id: `audit_approval_${approval.id}_${Date.now()}`,
-      caseId: null,
-      type: "simulator_run_saved",
-      actor,
-      note: `${approval.targetLabel} ${approval.action} was ${input.status}.`,
-      createdAt: approval.resolvedAt,
-      metadata: {
-        approvalId: approval.id,
-        status: approval.status,
-      },
-    });
-
-    await invalidateOperationalCaches();
-    return approval;
+  const store = await readOpsStore();
+  const latestRun = latest(store.simulatorRuns);
+  const replayCohort = latestRun?.replayCohort ?? "linked_attacks";
+  const defense = buildDefenseLabSnapshot({
+    ...(latestRun?.config ?? DEFAULT_CONFIG),
+    replayCohort,
+    merchantOverrides: store.merchantOverrides,
   });
+  const generatedApproval = findConsensusApprovalFromDefense(
+    defense,
+    input.approvalId,
+  );
+  const approval = findApprovalForResolution(
+    store.agentApprovalRequests,
+    generatedApproval ? [generatedApproval] : [],
+    input.approvalId,
+  );
+
+  if (approval.status !== "pending") return approval;
+
+  approval.status = input.status;
+  approval.resolvedAt = new Date().toISOString();
+  approval.resolvedBy = actor;
+  approval.resolutionNote =
+    input.note?.trim() ||
+    (input.status === "approved"
+      ? "Approved in simulator operations dock."
+      : "Rejected in simulator operations dock.");
+
+  const auditEvent: AuditEventRecord = {
+    id: `audit_approval_${approval.id}_${Date.now()}`,
+    caseId: null,
+    type: "simulator_run_saved",
+    actor,
+    note: `${approval.targetLabel} ${approval.action} was ${input.status}.`,
+    createdAt: approval.resolvedAt,
+    metadata: {
+      approvalId: approval.id,
+      status: approval.status,
+    },
+  };
+
+  await saveAgentApprovalResolution(approval, auditEvent);
+  await invalidateOperationalCaches();
+  return approval;
 }

@@ -1,6 +1,4 @@
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
-
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -16,41 +14,9 @@ from .services import (
 )
 
 
-class ProductionEmailDeliveryTests(TestCase):
-    @override_settings(
-        RESEND_API_KEY="re_test_key",
-        RESEND_API_URL="https://api.resend.com/emails",
-        RESEND_FROM_EMAIL="Sentinel <security@example.com>",
-    )
-    @patch("sentinel_auth.services.urlopen")
-    def test_uses_resend_https_api_when_configured(self, urlopen):
-        response = MagicMock()
-        response.__enter__.return_value.status = 200
-        urlopen.return_value = response
-
-        send_sentinel_email("Verification", "Code 123456", "analyst@example.com")
-
-        request = urlopen.call_args.args[0]
-        self.assertEqual(request.full_url, "https://api.resend.com/emails")
-        self.assertEqual(request.headers["Authorization"], "Bearer re_test_key")
-        self.assertEqual(urlopen.call_args.kwargs["timeout"], 10)
-
-    @override_settings(
-        RESEND_API_KEY="re_test_key",
-        RESEND_FROM_EMAIL="Sentinel <security@example.com>",
-    )
-    @patch("sentinel_auth.services.urlopen", side_effect=OSError("network blocked"))
-    def test_provider_failures_return_a_safe_service_error(self, _urlopen):
-        with self.assertRaises(AuthServiceError) as raised:
-            send_sentinel_email("Verification", "Code 123456", "analyst@example.com")
-
-        self.assertEqual(raised.exception.status, 503)
-        self.assertEqual(raised.exception.code, "EMAIL_DELIVERY_FAILED")
-        self.assertNotIn("network blocked", raised.exception.message)
-
+class EmailDeliveryTests(TestCase):
     @override_settings(
         DEBUG=False,
-        RESEND_API_KEY="",
         EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend",
     )
     def test_console_email_backend_is_rejected_in_production(self):

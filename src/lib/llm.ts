@@ -70,7 +70,7 @@ async function requestOpenAiCompatible(
   };
 
   if (provider === "openrouter") {
-    headers["HTTP-Referer"] = process.env.OPENROUTER_SITE_URL || "http://localhost:3000";
+    headers["HTTP-Referer"] = process.env.OPENROUTER_SITE_URL || "http://localhost:3001";
     headers["X-Title"] = process.env.OPENROUTER_APP_NAME || "Sentinel AI Risk Console";
   }
 

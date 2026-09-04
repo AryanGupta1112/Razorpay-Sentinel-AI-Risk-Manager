@@ -29,9 +29,9 @@ Put each key in that component's `*_API_KEY` variable. There is no shared provid
 | --- | --- | --- |
 | `DJANGO_AUTH_API_BASE_URL` | Django API base, normally `http://127.0.0.1:8000/api` | Uses local JSON auth |
 | `SENTINEL_DATABASE_URL` | PostgreSQL URL for operational state | Uses `.runtime/ops-store.json` |
-| `SENTINEL_DATABASE_POOL_MAX` | Maximum connections per Next.js process | `1` on Vercel, otherwise `10` |
-| `SENTINEL_DATABASE_IDLE_MS` | Time before an unused connection closes | `5000` on Vercel, otherwise `30000` |
-| `SENTINEL_DATABASE_CONNECT_MS` | Maximum time allowed to establish a connection | `2500` maximum on Vercel, otherwise `5000` |
+| `SENTINEL_DATABASE_POOL_MAX` | Maximum connections per Next.js process | `10` |
+| `SENTINEL_DATABASE_IDLE_MS` | Time before an unused connection closes | `30000` |
+| `SENTINEL_DATABASE_CONNECT_MS` | Maximum time allowed to establish a connection | `5000` |
 | `SENTINEL_REDIS_URL` | Redis URL for snapshots and assistant context | Uses in-process cache |
 
 ## Local Docker database
@@ -55,16 +55,16 @@ If an existing Docker volume was created with older credentials, either set `POS
 | `DJANGO_SECRET_KEY` | Django signing secret; replace outside development |
 | `DJANGO_AUTH_TOKEN_TTL_HOURS` | Session lifetime |
 | `DJANGO_AUTH_CODE_TTL_MINUTES` | Verification and reset code lifetime |
-| `AUTH_REQUIRE_VERIFICATION_FOR_NON_ADMINS` | Local-development verification switch; production always requires verification for every non-superuser account |
-| `AUTH_EXPOSE_CODES` | Includes development codes in API responses; keep false outside local development |
+| `AUTH_REQUIRE_VERIFICATION_FOR_NON_ADMINS` | Requires verification for every non-superuser account |
+| `AUTH_EXPOSE_CODES` | Includes development codes in API responses when explicitly enabled |
+| `DJANGO_EMAIL_HOST` | SMTP host, normally `smtp.gmail.com` |
+| `DJANGO_EMAIL_PORT` | SMTP port, normally `587` |
+| `DJANGO_EMAIL_USE_TLS` | Enables SMTP STARTTLS |
 | `DJANGO_EMAIL_HOST_USER` | SMTP username |
 | `DJANGO_EMAIL_HOST_PASSWORD` | SMTP password or application password |
 | `DJANGO_EMAIL_FROM` | Sender address |
 | `DJANGO_EMAIL_TIMEOUT_SECONDS` | SMTP connection timeout; defaults to `10` seconds |
-| `RESEND_API_KEY` | Resend API key for HTTPS email delivery on hosts that block SMTP |
-| `RESEND_FROM_EMAIL` | Sender identity on a domain verified by Resend |
-
-The Docker stack also accepts `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, and `DJANGO_EMAIL_USE_TLS`. When `RESEND_API_KEY` is present, Django sends verification and reset emails through Resend's HTTPS API instead of SMTP. This is the recommended configuration for Render free web services, which block outbound SMTP ports.
+When SMTP credentials are empty, Django uses its console email backend and prints messages in the backend logs. With credentials configured, verification and password-reset messages are sent through SMTP.
 
 For a local Django process, `DATABASE_URL` selects PostgreSQL, `DJANGO_SQLITE_PATH` overrides the SQLite file, and `SENTINEL_RUNTIME_DIR` overrides the default `.runtime/` location.
 
@@ -96,13 +96,11 @@ Next.js reads `.env.local` and `.env` according to framework conventions. The Dj
 
 Never duplicate one real key across the example file, documentation, and runtime files. `.env.example` describes names and safe defaults only.
 
-## Production checklist
+## Local safety checklist
 
-- Replace `DJANGO_SECRET_KEY`.
-- Set `AUTH_COOKIE_SECURE=true` behind HTTPS.
+- Change seeded credentials if the development machine is shared.
 - Keep `AUTH_EXPOSE_CODES=false`.
-- Use managed PostgreSQL and Redis URLs with appropriate transport security.
-- Configure SMTP and verify sender reputation.
-- Restrict `DJANGO_ALLOWED_HOSTS`.
+- Keep the service ports on a trusted local interface.
+- Configure SMTP with an application password.
 - Rotate every provider key that has appeared in logs, screenshots, or shared messages.
 - Do not expose server keys through `NEXT_PUBLIC_*` variables.

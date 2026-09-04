@@ -170,9 +170,6 @@ EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_PASSWORD", "")
 EMAIL_TIMEOUT = int(os.getenv("DJANGO_EMAIL_TIMEOUT_SECONDS", "10"))
 DEFAULT_FROM_EMAIL = os.getenv("DJANGO_EMAIL_FROM", EMAIL_HOST_USER or "sentinel@example.local")
-RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
-RESEND_API_URL = os.getenv("RESEND_API_URL", "https://api.resend.com/emails").strip()
-RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", DEFAULT_FROM_EMAIL).strip()
 
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
 CACHES = (

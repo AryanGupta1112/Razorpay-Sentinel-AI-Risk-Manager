@@ -2,7 +2,7 @@
 
 ## System shape
 
-Sentinel uses a Next.js 16 application for the web console and operational API. Authentication can run through the built-in JSON store or an optional Django service. PostgreSQL and Redis are optional production-shaped adapters; local JSON and in-memory fallbacks keep development self-contained.
+Sentinel uses a Next.js 16 application for the web console and operational API. Authentication can run through the built-in JSON store or the local Django service. PostgreSQL and Redis provide the complete local stack; JSON and in-memory fallbacks keep lightweight development self-contained.
 
 ```text
 Browser

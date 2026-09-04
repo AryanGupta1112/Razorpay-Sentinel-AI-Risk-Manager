@@ -4,7 +4,7 @@
 
 - Node.js 20 or newer
 - npm
-- Docker Desktop for the optional backend stack
+- Docker Desktop for the full local backend stack
 - Python 3.14 only when running Django outside Docker
 
 ## Standalone mode
@@ -23,11 +23,11 @@ The local stores are created under `.runtime/`. This directory is ignored by ver
 Keep the service connection values from `.env.example`, then run:
 
 ```powershell
-docker compose up --build
+npm run local:services
 npm run dev
 ```
 
-The compose stack runs Django on port `8000`, PostgreSQL on port `5432`, and Redis on port `6379`. The Django container runs migrations and seeds development users during startup.
+Open `http://localhost:3001`. The Compose stack runs Django on port `8000`, PostgreSQL on port `5432`, and Redis on port `6379`. The Django container runs migrations and seeds development users during startup.
 
 Stop services with `docker compose down`. Use `docker compose down -v` only when you intentionally want to delete PostgreSQL and Redis volumes.
 
@@ -52,7 +52,7 @@ If Python dependencies are not installed locally, run `docker compose run --rm s
 
 ## Startup sequence
 
-In full backend mode, Compose starts PostgreSQL and Redis before Django. The Django entrypoint runs migrations, seeds development users, and starts the server on port 8000. Next.js remains a separate local process and connects through the values in `.env.local`.
+In full backend mode, Compose starts PostgreSQL and Redis before Django. The Django entrypoint runs migrations, seeds development users, and starts the server on port 8000. Next.js remains a separate local process on port 3001 and connects through the values in `.env.local`.
 
 In standalone mode, Next.js creates local auth and operations stores on first use. No database migration command is required.
 
@@ -76,7 +76,7 @@ docker compose exec sentinel-postgres pg_isready -U sentinel
 docker compose exec sentinel-redis redis-cli ping
 ```
 
-Django should report no system issues with `python backend/manage.py check`. The Next.js production build is the strongest repository-wide compile check because it validates route discovery, server/client boundaries, TypeScript, and static generation.
+Django should report no system issues with `python backend/manage.py check`. The Next.js build is the strongest repository-wide compile check because it validates route discovery, server/client boundaries, TypeScript, and static generation.
 
 ## Suggested development loop
 
@@ -85,7 +85,7 @@ Django should report no system issues with `python backend/manage.py check`. The
 3. Validate the affected workflow in Continue state.
 4. Repeat it in Halt state when the change touches timers, writes, agents, or APIs.
 5. Check a merchant-scoped user when the change targets businesses or cases.
-6. Run lint, strict TypeScript, Knip, Django checks, and a production build before handoff.
+6. Run lint, strict TypeScript, Knip, Django checks, and a full build before handoff.
 
 ## Data reset and Docker volumes
 

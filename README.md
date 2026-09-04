@@ -153,9 +153,9 @@ Read the complete narrative in [docs/project-story.md](docs/project-story.md) an
 ### Services and persistence
 
 - Next.js route handlers for the console API
-- Django 6.1 and Django REST Framework for optional authentication
-- PostgreSQL 17 for optional operational and identity persistence
-- Redis 8 for optional snapshot and assistant-context caching
+- Django 6.1 and Django REST Framework for full local authentication
+- PostgreSQL 17 for local operational and identity persistence
+- Redis 8 for local snapshot and assistant-context caching
 - Local JSON and in-process fallbacks for infrastructure-free development
 
 ### Model providers
@@ -181,7 +181,7 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3001](http://localhost:3001).
 
 With no service variables configured, Sentinel automatically uses:
 
@@ -194,7 +194,7 @@ Use the platform administrator account from [Development accounts](#development-
 
 ## Run with Django, PostgreSQL, and Redis
 
-Use this mode to run the production-shaped backend adapters while keeping Next.js as the web and operational API process.
+Use this mode for the complete local stack while keeping Next.js as the web and operational API process.
 
 ### Requirements
 
@@ -226,8 +226,8 @@ Add model keys only if live generated explanations are required.
 ### 2. Start backend services
 
 ```powershell
-docker compose up --build -d
-docker compose ps
+npm run local:services
+npm run local:status
 ```
 
 Compose starts:
@@ -249,7 +249,7 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3001](http://localhost:3001).
 
 ### Stop services
 
@@ -274,7 +274,7 @@ Both local authentication and the Django seed command create the same demonstrat
 | `fraud_ops` | `FraudOps!2026` | Fraud Ops Analyst | Email verification required by default |
 | `merchant_risk` | `MerchantRisk!2026` | Merchant Risk Analyst | Verification required; scoped to `M_QUICKBASKET` and `M_VYRA` |
 
-These credentials are for local development only. Replace or remove them before any shared or deployed environment.
+These credentials are for local development only. Change them if the computer or local network is shared.
 
 ## Configure model providers
 
@@ -305,7 +305,7 @@ There is no shared provider-key fallback. This isolates credentials and quotas b
 OpenRouter also reads:
 
 ```env
-OPENROUTER_SITE_URL=http://localhost:3000
+OPENROUTER_SITE_URL=http://localhost:3001
 OPENROUTER_APP_NAME=Sentinel AI Risk Console
 ```
 
@@ -319,8 +319,8 @@ These values identify the application in request headers; they are not credentia
 | --- | --- | --- |
 | `DJANGO_AUTH_API_BASE_URL` | Django API base URL | Uses local JSON authentication |
 | `SENTINEL_DATABASE_URL` | PostgreSQL connection for operational state | Uses `.runtime/ops-store.json` |
-| `SENTINEL_DATABASE_POOL_MAX` | PostgreSQL connections per Next.js instance | `1` on Vercel, otherwise `10` |
-| `SENTINEL_DATABASE_CONNECT_MS` | PostgreSQL connection timeout in milliseconds | `2500` maximum on Vercel, otherwise `5000` |
+| `SENTINEL_DATABASE_POOL_MAX` | PostgreSQL connections per Next.js process | `10` |
+| `SENTINEL_DATABASE_CONNECT_MS` | PostgreSQL connection timeout in milliseconds | `5000` |
 | `SENTINEL_REDIS_URL` | Redis connection for snapshots and assistant context | Uses process memory |
 | `POSTGRES_DB` | Local Compose database name | Defaults to `sentinel` |
 | `POSTGRES_USER` | Local Compose database user | Defaults to `sentinel` |
@@ -333,15 +333,12 @@ These values identify the application in request headers; they are not credentia
 | `DJANGO_SECRET_KEY` | Django signing secret | Development-only value |
 | `DJANGO_AUTH_TOKEN_TTL_HOURS` | Session lifetime | `168` |
 | `DJANGO_AUTH_CODE_TTL_MINUTES` | Verification and reset-code lifetime | `30` |
-| `AUTH_REQUIRE_VERIFICATION_FOR_NON_ADMINS` | Local verification switch; production requires verification for every non-superuser | `true` |
+| `AUTH_REQUIRE_VERIFICATION_FOR_NON_ADMINS` | Require verification for every non-superuser account | `true` |
 | `AUTH_EXPOSE_CODES` | Include development codes in responses | `false` in the example |
 | `DJANGO_EMAIL_HOST_USER` | SMTP username | Empty |
 | `DJANGO_EMAIL_HOST_PASSWORD` | SMTP password or application password | Empty |
 | `DJANGO_EMAIL_FROM` | Sender address | Empty |
-| `RESEND_API_KEY` | Resend HTTPS API key for hosted email delivery | Empty |
-| `RESEND_FROM_EMAIL` | Sender identity on a verified Resend domain | Empty |
-
-When SMTP credentials are empty, local Django uses its console email backend. Render free services block SMTP ports, so hosted deployments should configure `RESEND_API_KEY` and `RESEND_FROM_EMAIL`; Resend then takes precedence over SMTP. See [docs/configuration.md](docs/configuration.md) for provider behavior, precedence, and deployment guidance.
+When SMTP credentials are empty, local Django uses its console email backend and prints verification codes in `docker compose logs sentinel-backend`. Configure the SMTP variables to deliver real email locally.
 
 ## Halt and Continue
 
@@ -463,9 +460,12 @@ Available npm scripts:
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Start the Next.js development server |
-| `npm run build` | Compile and validate the production application |
-| `npm run start` | Run the previously built production server |
+| `npm run build` | Compile and validate the application |
+| `npm run start` | Run the previously built application on port `3001` |
 | `npm run lint` | Run ESLint against `src/` |
+| `npm run local:services` | Build and start Django, PostgreSQL, and Redis |
+| `npm run local:status` | Show local service health |
+| `npm run local:stop` | Stop local services without deleting their data |
 
 ## Local state and reset
 
@@ -519,14 +519,12 @@ Stop the application and reset the relevant `.runtime/` store, or verify that a 
 
 ## Security and limitations
 
-### Before deployment
+### Local credential safety
 
-- Replace all development credentials and `DJANGO_SECRET_KEY`.
-- Set `AUTH_COOKIE_SECURE=true` behind HTTPS.
+- Change development credentials when other people can access the computer or local network.
 - Keep `AUTH_EXPOSE_CODES=false`.
-- Restrict `DJANGO_ALLOWED_HOSTS`.
-- Configure authenticated SMTP.
-- Use managed PostgreSQL and Redis with transport security and restricted network access.
+- Keep PostgreSQL, Redis, and Django bound to trusted local interfaces.
+- Use an SMTP application password rather than an email account password.
 - Rotate any model key that has appeared in screenshots, logs, chat, or source control.
 - Never expose server credentials through a `NEXT_PUBLIC_*` variable.
 
