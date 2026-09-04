@@ -14,7 +14,6 @@ import {
   caseTitle,
   readOpsStore,
   withOpsStore,
-  writeOpsStore,
 } from "@/lib/server/ops-store";
 import {
   deleteCachedByPrefix,
@@ -212,8 +211,6 @@ async function ensureOperationalStore(
         createdAt: reviewCase.createdAt,
       })),
     );
-    await writeOpsStore(store);
-    await invalidateOperationalCaches();
   }
 
   return { snapshot, defense, store };
