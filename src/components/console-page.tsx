@@ -13,12 +13,15 @@ export default async function ConsolePage({
 }: {
   initialScreen: ConsoleScreen;
 }) {
-  const session = await requireSession();
+  const [session, operationsHalted, { data }] = await Promise.all([
+    requireSession(),
+    areOperationsHalted(),
+    getConsoleBootstrap(),
+  ]);
   if (!canViewScreen(session.user.role, initialScreen)) {
     redirect("/overview");
   }
-  const initialOperationsMode = (await areOperationsHalted()) ? "halted" : "running";
-  const { data } = await getConsoleBootstrap();
+  const initialOperationsMode = operationsHalted ? "halted" : "running";
   const scopedData = scopeConsoleData(data, session.user);
 
   return (

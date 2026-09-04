@@ -191,9 +191,9 @@ async function ensureOperationalStore(
     merchantOverrides: store.merchantOverrides,
   });
   const defense =
-    options?.enrichAgentReasoning === false
-      ? seededDefense
-      : await enrichDefenseLabWithAgentReasoning(seededDefense);
+    options?.enrichAgentReasoning === true
+      ? await enrichDefenseLabWithAgentReasoning(seededDefense)
+      : seededDefense;
   const { created } = reconcileCases(store.cases, snapshot.alerts, snapshot.generatedAt);
   const runtime = refreshAgentRuntime(defense, replayCohort, store.agentApprovalRequests);
 
