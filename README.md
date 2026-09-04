@@ -338,8 +338,10 @@ These values identify the application in request headers; they are not credentia
 | `DJANGO_EMAIL_HOST_USER` | SMTP username | Empty |
 | `DJANGO_EMAIL_HOST_PASSWORD` | SMTP password or application password | Empty |
 | `DJANGO_EMAIL_FROM` | Sender address | Empty |
+| `RESEND_API_KEY` | Resend HTTPS API key for hosted email delivery | Empty |
+| `RESEND_FROM_EMAIL` | Sender identity on a verified Resend domain | Empty |
 
-When SMTP credentials are empty, local Django uses its console email backend. See [docs/configuration.md](docs/configuration.md) for provider behavior, precedence, and deployment guidance.
+When SMTP credentials are empty, local Django uses its console email backend. Render free services block SMTP ports, so hosted deployments should configure `RESEND_API_KEY` and `RESEND_FROM_EMAIL`; Resend then takes precedence over SMTP. See [docs/configuration.md](docs/configuration.md) for provider behavior, precedence, and deployment guidance.
 
 ## Halt and Continue
 

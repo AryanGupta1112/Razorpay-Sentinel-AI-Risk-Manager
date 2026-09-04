@@ -60,8 +60,10 @@ If an existing Docker volume was created with older credentials, either set `POS
 | `DJANGO_EMAIL_HOST_USER` | SMTP username |
 | `DJANGO_EMAIL_HOST_PASSWORD` | SMTP password or application password |
 | `DJANGO_EMAIL_FROM` | Sender address |
+| `RESEND_API_KEY` | Resend API key for HTTPS email delivery on hosts that block SMTP |
+| `RESEND_FROM_EMAIL` | Sender identity on a domain verified by Resend |
 
-The Docker stack also accepts `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, and `DJANGO_EMAIL_USE_TLS`.
+The Docker stack also accepts `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, and `DJANGO_EMAIL_USE_TLS`. When `RESEND_API_KEY` is present, Django sends verification and reset emails through Resend's HTTPS API instead of SMTP. This is the recommended configuration for Render free web services, which block outbound SMTP ports.
 
 For a local Django process, `DATABASE_URL` selects PostgreSQL, `DJANGO_SQLITE_PATH` overrides the SQLite file, and `SENTINEL_RUNTIME_DIR` overrides the default `.runtime/` location.
 
