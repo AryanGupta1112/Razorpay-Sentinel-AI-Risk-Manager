@@ -319,6 +319,8 @@ These values identify the application in request headers; they are not credentia
 | --- | --- | --- |
 | `DJANGO_AUTH_API_BASE_URL` | Django API base URL | Uses local JSON authentication |
 | `SENTINEL_DATABASE_URL` | PostgreSQL connection for operational state | Uses `.runtime/ops-store.json` |
+| `SENTINEL_DATABASE_POOL_MAX` | PostgreSQL connections per Next.js instance | `1` on Vercel, otherwise `10` |
+| `SENTINEL_DATABASE_CONNECT_MS` | PostgreSQL connection timeout in milliseconds | `20000` on Vercel, otherwise `5000` |
 | `SENTINEL_REDIS_URL` | Redis connection for snapshots and assistant context | Uses process memory |
 | `POSTGRES_DB` | Local Compose database name | Defaults to `sentinel` |
 | `POSTGRES_USER` | Local Compose database user | Defaults to `sentinel` |

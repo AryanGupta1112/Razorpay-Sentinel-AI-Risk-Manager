@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Pool, type PoolClient, type QueryResultRow } from "pg";
+import { getDatabasePoolOptions } from "@/lib/server/database-options";
 
 const DATABASE_URL = process.env.SENTINEL_DATABASE_URL?.trim() || process.env.DATABASE_URL?.trim() || "";
 
@@ -11,9 +12,7 @@ declare global {
 function createPool() {
   return new Pool({
     connectionString: DATABASE_URL,
-    max: Number(process.env.SENTINEL_DATABASE_POOL_MAX || 10),
-    idleTimeoutMillis: Number(process.env.SENTINEL_DATABASE_IDLE_MS || 30_000),
-    connectionTimeoutMillis: Number(process.env.SENTINEL_DATABASE_CONNECT_MS || 5_000),
+    ...getDatabasePoolOptions(),
   });
 }
 
