@@ -1,0 +1,85 @@
+# Dependencies and package-manager state
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Environment files and local secrets
+.env*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Application runtime state
+/.runtime/
+*.sqlite3
+*.sqlite3-journal
+
+# Next.js and production output
+/.next/
+/out/
+/build
+/dist
+/.vercel/
+next-env.d.ts
+*.tsbuildinfo
+
+# Python environments and caches
+__pycache__/
+*.py[cod]
+*$py.class
+/.venv/
+/venv/
+/env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+/htmlcov/
+
+# Test and browser automation output
+/coverage/
+/test-results/
+/playwright-report/
+/blob-report/
+
+# Local editor and coding-agent configuration
+/.vscode/
+/.idea/
+/.codex/
+/.cursor/
+/.claude/
+/.impeccable/
+
+# Django-generated files
+/media/
+/staticfiles/
+
+# Logs, temporary files, and local captures
+*.log
+*.tmp
+*.temp
+*.bak
+*~
+/.tmp/
+/cookiejar.txt
+/login-body*.json
+/*.png
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Package-manager debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*

@@ -1,0 +1,17 @@
+.git
+.next
+node_modules
+.runtime
+.claude
+.codex
+.cursor
+.impeccable
+.tmp
+public
+devserver.log
+cookiejar.txt
+tsconfig.tsbuildinfo
+*.png
+backend/__pycache__
+backend/**/*.pyc
+backend/db.sqlite3
